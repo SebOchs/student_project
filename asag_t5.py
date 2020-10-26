@@ -12,7 +12,7 @@ path = "datasets/preprocessed/sciEntsBank_train.npy"
 device = torch.device("cuda")
 
 # constants:
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 EPOCHS = 8
 tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
