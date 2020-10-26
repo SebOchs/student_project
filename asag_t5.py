@@ -20,7 +20,7 @@ tokenizer = T5Tokenizer.from_pretrained('t5-base')
 model = T5ForConditionalGeneration.from_pretrained('t5-large')
 if torch.cuda.device_count() > 1:
     print("Running on ", torch.cuda.device_count(), " GPUs")
-    model = nn.DataParallel(model)
+    model = nn.DataParallel(model, device_ids=[0,1])
 model.cuda()
 optimizer = Adafactor(model.parameters(), lr=None, warmup_init=True, relative_step=True)
 
