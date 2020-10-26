@@ -47,8 +47,8 @@ for i in trange(EPOCHS, desc="Epoch "):
         optimizer.zero_grad()
         outputs = model(input_ids=text, labels=lab)
         loss = outputs[0]
-        train_loss.append(loss.item())
-        loss.backward()
+        train_loss.append(loss.mean().item())
+        loss.mean().backward()
         optimizer.step()
         training_loss += loss.item()
         training_step += 1
