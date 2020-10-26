@@ -12,12 +12,12 @@ path = "datasets/preprocessed/sciEntsBank_train.npy"
 device = torch.device("cuda")
 
 # constants:
-BATCH_SIZE = 4
-EPOCHS = 32
+BATCH_SIZE = 16
+EPOCHS = 8
 tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
 # Initialize Model and Optimizer
-model = T5ForConditionalGeneration.from_pretrained('t5-small')
+model = T5ForConditionalGeneration.from_pretrained('t5-large')
 if torch.cuda.device_count() > 1:
     print("Running on ", torch.cuda.device_count(), " GPUs")
     model = nn.DataParallel(model)
