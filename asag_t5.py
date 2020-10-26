@@ -37,8 +37,6 @@ for i in trange(EPOCHS, desc="Epoch "):
 
     # Training
     model.train()
-    training_loss = 0
-    training_step = 0
 
     for step, batch in enumerate(train_loader):
         # Load batch on gpu
@@ -47,13 +45,9 @@ for i in trange(EPOCHS, desc="Epoch "):
         optimizer.zero_grad()
         outputs = model(input_ids=text, labels=lab)
         loss = outputs[0]
-        train_loss.append(loss.mean().item())
         loss.mean().backward()
         optimizer.step()
-        training_loss += loss.item()
-        training_step += 1
 
-    print("Train Loss: {}".format(training_loss / training_step))
 
     # Validation
     model.eval()
