@@ -83,6 +83,6 @@ for i in trange(EPOCHS, desc="Epoch "):
     accuracy = accuracy_point/validation_step
     print("Accuracy: ", accuracy / validation_step)
     if accuracy/validation_step > tracker:
-        torch.save(model.state_dict(), "t5_testing_"+str(i)+"_"+str(accuracy/validation_step*10000)[:2]+'.pt')
+        torch.save(model.state_dict(), "t5_testing_"+str(i)+"_"+str(accuracy*10000)[:2]+'.pt')
         tracker = accuracy/validation_step
 
