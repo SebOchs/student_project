@@ -32,7 +32,7 @@ if torch.cuda.device_count() > 1:
     device_ids = list(range(torch.cuda.device_count()))
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '29500'
-    dist.init_process_group(backend='nccl', rank=2, world_size=2)
+    dist.init_process_group(backend='nccl', rank=2, world_size=2, store="/tmp/filestore")
     model = DDP(model, device_ids=device_ids, find_unused_parameters=True)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
     val_sampler = torch.utils.data.distributed.DistributedSampler(val_data)
