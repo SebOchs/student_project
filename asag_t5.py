@@ -30,7 +30,7 @@ model = T5ForConditionalGeneration.from_pretrained('t5-large')
 if torch.cuda.device_count() > 1:
     print("Running on ", torch.cuda.device_count(), " GPUs")
     device_ids = list(range(torch.cuda.device_count()))
-    dist.init_process_group(backend='nccl', rank=2)
+    dist.init_process_group(backend='nccl', rank=[0, 1], world_size=2)
     model = DDP(model, device_ids=device_ids, find_unused_parameters=True)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
     val_sampler = torch.utils.data.distributed.DistributedSampler(val_data)
