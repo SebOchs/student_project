@@ -7,7 +7,7 @@ from tqdm import trange
 from transformers import T5ForConditionalGeneration, Adafactor, T5Tokenizer
 import dataloading as dl
 import torch.multiprocessing as mp
-
+import os
 from torch.nn.parallel import DistributedDataParallel as DDP
 path = "datasets/preprocessed/sciEntsBank_train.npy"
 
@@ -30,6 +30,8 @@ model = T5ForConditionalGeneration.from_pretrained('t5-large')
 if torch.cuda.device_count() > 1:
     print("Running on ", torch.cuda.device_count(), " GPUs")
     device_ids = list(range(torch.cuda.device_count()))
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend='nccl', rank=2, world_size=2)
     model = DDP(model, device_ids=device_ids, find_unused_parameters=True)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
