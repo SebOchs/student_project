@@ -25,7 +25,7 @@ train_data, val_data = random_split(dl.SemEvalDataset("datasets/preprocessed/sci
                                     [4472, 497], generator=torch.Generator().manual_seed(42))
 # Initialize Modeand Optimizer
 model = T5ForConditionalGeneration.from_pretrained('t5-large')
-
+model.cuda()
 # Implement DDP
 if torch.cuda.device_count() > 1:
     print("Running on ", torch.cuda.device_count(), " GPUs")
@@ -41,7 +41,6 @@ else:
     train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, num_workers=0, shuffle=True)
     val_loader = DataLoader(val_data, batch_size=1, num_workers=0, shuffle=False)
 
-model.cuda()
 # Optimizer
 optimizer = Adafactor(model.parameters(), lr=None, warmup_init=True, relative_step=True)
 
