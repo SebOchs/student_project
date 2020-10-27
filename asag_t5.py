@@ -30,7 +30,7 @@ model.cuda()
 if torch.cuda.device_count() > 1:
     print("Running on ", torch.cuda.device_count(), " GPUs")
     device_ids = list(range(torch.cuda.device_count()))
-    store = torch.distributed.FileStore("tmp", 2)
+    store = torch.distributed.FileStore("tmp/test", 2)
     dist.init_process_group(backend='nccl', rank=2, world_size=2, store=store)
     model = DDP(model, find_unused_parameters=True)
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
