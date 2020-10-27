@@ -16,7 +16,7 @@ path = "datasets/preprocessed/sciEntsBank_train.npy"
 device = torch.device("cuda")
 
 # constants:
-BATCH_SIZE = 4
+BATCH_SIZE = 8
 EPOCHS = 8
 tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
@@ -24,7 +24,7 @@ tokenizer = T5Tokenizer.from_pretrained('t5-base')
 train_data, val_data = random_split(dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_train.npy"),
                                     [4472, 497], generator=torch.Generator().manual_seed(42))
 # Initialize Modeand Optimizer
-model = T5ForConditionalGeneration.from_pretrained('t5-base')
+model = T5ForConditionalGeneration.from_pretrained('t5-small')
 model.cuda()
 # Implement DDP
 if torch.cuda.device_count() > 1:
