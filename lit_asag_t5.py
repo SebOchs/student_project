@@ -72,5 +72,5 @@ class LitT5(pl.LightningModule):
 
 # Testing
 t5_test = LitT5()
-trainer = pl.Trainer(gpus=2, num_nodes=1, distributed_backend='ddp', max_epochs=8)
+trainer = pl.Trainer(gpus=2, num_nodes=1, distributed_backend='dp', max_epochs=8)
 trainer.fit(t5_test)
