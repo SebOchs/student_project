@@ -64,7 +64,7 @@ class LitT5(pl.LightningModule):
 
     def train_dataloader(self):
         train_sampler = RandomSampler(self.train_data)
-        return DataLoader(self.train_data, batch_size=4, num_workers=0, sampler=train_sampler)
+        return DataLoader(self.train_data, batch_size=2, num_workers=0, sampler=train_sampler)
 
     def val_dataloader(self):
         val_sampler = RandomSampler(self.val_data)
@@ -72,5 +72,5 @@ class LitT5(pl.LightningModule):
 
 # Testing
 t5_test = LitT5()
-trainer = pl.Trainer(gpus=2, num_nodes=1, distributed_backend='dp', max_epochs=8)
+trainer = pl.Trainer(gpus=2, num_nodes=1, distributed_backend='ddp', max_epochs=8)
 trainer.fit(t5_test)
