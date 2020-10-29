@@ -36,9 +36,7 @@ class LitT5(pl.LightningModule):
         acc = np.sum([1 for i in range(len(acc_stack.T)) if acc_stack[0, i] == acc_stack[1, i]]) / len(acc_stack.T)
         m_f1 = macro_f1(pred, lab)
         w_f1 = weighted_f1(pred, lab)
-        print("Accuracy: " + str(acc)[:6])
-        print("Macro-F1: " + str(m_f1)[:6])
-        print("Weighted-F1 " + str(w_f1)[:6])
+        print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
 
     """
     # prepared for later use
