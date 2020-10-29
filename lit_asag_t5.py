@@ -88,6 +88,7 @@ trainer = pl.Trainer(
     num_nodes=1,
     distributed_backend='ddp',
     max_epochs=10,
-    accumulate_grad_batches=2
+    accumulate_grad_batches=2,
+    checkpoint_callback=checkpoint_callback
 )
 trainer.fit(t5_test)
