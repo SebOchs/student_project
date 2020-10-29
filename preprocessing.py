@@ -4,7 +4,7 @@ from transformers import T5Tokenizer
 import numpy as np
 
 tokenizer = T5Tokenizer.from_pretrained('t5-base')
-PATH = "datasets/raw/sciEntsBank_training"
+PATH = "datasets/raw/sciEntsBank_testing/test-unseen-questions"
 array = []
 files = os.listdir(PATH)
 for file in files:
@@ -17,4 +17,4 @@ for file in files:
                 label = 'contradict'
             array.append([tokenizer(text, padding='max_length').input_ids, tokenizer(label).input_ids])
 
-np.save("datasets/preprocessed/sciEntsBank_train.npy", np.array(array), allow_pickle=True)
+np.save("datasets/preprocessed/sciEntsBank_test_uq.npy", np.array(array), allow_pickle=True)

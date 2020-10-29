@@ -7,7 +7,6 @@ from transformers import T5ForConditionalGeneration, Adafactor, T5Tokenizer
 from utils import macro_f1, weighted_f1
 import dataloading as dl
 import warnings
-from pytorch_lightning.callbacks import ModelCheckpoint
 
 warnings.filterwarnings("ignore")
 
@@ -20,6 +19,7 @@ class LitT5(pl.LightningModule):
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.train_data, self.val_data = random_split(dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_train.npy"),
                                                       [4472, 497], generator=torch.Generator().manual_seed(42))
+        self.test_data = dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_test_ua.npy")
 
     def forward(self, tok_seq):
         return self.tokenizer.decode(self.model.generate(tok_seq)[0])
@@ -42,7 +42,6 @@ class LitT5(pl.LightningModule):
         print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
         self.log("val_macro", m_f1)
 
-    """
     # prepared for later use
     def test_step(self, batch, batch_idx):
         text, lab = batch
@@ -58,8 +57,9 @@ class LitT5(pl.LightningModule):
         print("Accuracy: " + str(acc)[:6])
         print("Macro-F1: " + str(m_f1)[:6])
         print("Weighted-F1 " + str(w_f1)[:6])
-        return [acc, m_f1, w_f1]
-    """
+        self.log("test_macro", m_f1)
+        self.log("test_weighted", w_f1)
+        self.log("test_acc", acc)
 
     def configure_optimizers(self):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
@@ -74,21 +74,5 @@ class LitT5(pl.LightningModule):
         """
         return DataLoader(self.val_data, batch_size=1, num_workers=0, shuffle=False, sampler=None)
 
-
-# Testing
-checkpoint_callback = ModelCheckpoint(
-    monitor="val_macro",
-    mode="max",
-    filepath='models/asag/{epoch}-{val_macro:.2f}',
-    save_top_k=1
-)
-t5_test = LitT5()
-trainer = pl.Trainer(
-    gpus=2,
-    num_nodes=1,
-    distributed_backend='ddp',
-    max_epochs=10,
-    accumulate_grad_batches=2,
-    checkpoint_callback=checkpoint_callback
-)
-trainer.fit(t5_test)
+    def test_dataloader(self):
+        return DataLoader(self.test_data, batch_size=1, num_workers=0, shuffle=False, sampler=None)
