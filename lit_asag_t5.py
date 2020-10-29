@@ -65,8 +65,10 @@ class LitT5(pl.LightningModule):
         return DataLoader(self.train_data, batch_size=6, num_workers=0, sampler=train_sampler)
 
     def val_dataloader(self):
+        """
         val_sampler = RandomSampler(self.val_data)
-        return DataLoader(self.val_data, batch_size=1, num_workers=0, shuffle=False, sampler=val_sampler)
+        """
+        return DataLoader(self.val_data, batch_size=1, num_workers=0, shuffle=False, sampler=None)
 
 # Testing
 t5_test = LitT5()
