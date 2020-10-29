@@ -27,7 +27,7 @@ class LitT5(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         text, lab = batch
-        return {'prediction': self(text), 'truth': self.tokenizer.decode(lab.to('cpu').numpy().squeeze())}
+        return {'prediction': self(text), 'truth': self.tokenizer.decode(lab.squeeze())}
 
     def validation_epoch_end(self, outputs):
         pred = [x['prediction'] for x in outputs]
@@ -68,7 +68,7 @@ class LitT5(pl.LightningModule):
 
     def val_dataloader(self):
         val_sampler = RandomSampler(self.val_data)
-        return DataLoader(self.val_data, batch_size=2, num_workers=0, shuffle=False, sampler=val_sampler)
+        return DataLoader(self.val_data, batch_size=1, num_workers=0, shuffle=False, sampler=val_sampler)
 
 # Testing
 t5_test = LitT5()
