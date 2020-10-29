@@ -79,7 +79,7 @@ class LitT5(pl.LightningModule):
 checkpoint_callback = ModelCheckpoint(
     monitor="val_macro",
     mode="max",
-    filename='{epoch}-{val_macro:.2f}',
+    filepath='{epoch}-{val_macro:.2f}',
     dirpath="models/asag",
     save_top_k=1
 )
