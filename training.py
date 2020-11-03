@@ -14,7 +14,7 @@ trainer = pl.Trainer(
     num_nodes=1,
     distributed_backend='ddp',
     max_epochs=16,
-    accumulate_grad_batches=4,
+    accumulate_grad_batches=8,
     checkpoint_callback=checkpoint_callback
 )
 
