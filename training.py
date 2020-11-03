@@ -5,7 +5,7 @@ from lit_asag_t5 import LitT5
 checkpoint_callback = ModelCheckpoint(
     monitor="val_macro",
     mode="max",
-    filepath='models/asag/{epoch}-{val_macro:.2f}',
+    filepath='models/asag/{epoch}-{val_macro:.4f}',
     save_top_k=1
 )
 t5_test = LitT5()
