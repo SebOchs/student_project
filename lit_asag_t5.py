@@ -14,7 +14,7 @@ class LitT5(pl.LightningModule):
 
     def __init__(self):
         super(LitT5, self).__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-base')
+        self.model = T5ForConditionalGeneration.from_pretrained('t5-large', n_positions=128)
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.train_data, self.val_data = random_split(dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_train.npy"),
                                                       [4472, 497], generator=torch.Generator().manual_seed(42))
