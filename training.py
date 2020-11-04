@@ -10,9 +10,9 @@ checkpoint_callback = ModelCheckpoint(
 )
 t5_test = LitT5()
 trainer = pl.Trainer(
-    gpus=2,
-    num_nodes=1,
-    distributed_backend='ddp',
+    gpus=1,
+    #num_nodes=1,
+    #distributed_backend='ddp',
     max_epochs=16,
     accumulate_grad_batches=8,
     checkpoint_callback=checkpoint_callback
