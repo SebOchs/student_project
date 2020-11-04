@@ -59,6 +59,7 @@ class LitT5(pl.LightningModule):
         self.log("test_macro", m_f1)
         self.log("test_weighted", w_f1)
         self.log("test_acc", acc)
+        print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
 
     def configure_optimizers(self):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
