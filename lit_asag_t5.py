@@ -6,18 +6,19 @@ from transformers import T5ForConditionalGeneration, Adafactor, T5Tokenizer
 from utils import macro_f1, weighted_f1
 import dataloading as dl
 import warnings
+from numpy.random import seed
 
 warnings.filterwarnings("ignore")
-
+seed(42)
 
 class LitT5(pl.LightningModule):
 
     def __init__(self):
         super(LitT5, self).__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-large', n_positions=128)
+        self.model = T5ForConditionalGeneration.from_pretrained('t5-base', n_positions=128)
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.train_data, self.val_data = random_split(dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_train.npy"),
-                                                      [4472, 497], generator=torch.Generator().manual_seed(42))
+                                                      [4472, 497], generator=torch.Generator())
         self.test_data = dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_test_ua.npy")
 
     def forward(self, tok_seq):
@@ -66,7 +67,7 @@ class LitT5(pl.LightningModule):
 
     def train_dataloader(self):
         train_sampler = RandomSampler(self.train_data)
-        return DataLoader(self.train_data, batch_size=2, num_workers=0, sampler=train_sampler)
+        return DataLoader(self.train_data, batch_size=4, num_workers=0, sampler=train_sampler)
 
     def val_dataloader(self):
         """

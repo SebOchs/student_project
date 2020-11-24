@@ -6,14 +6,14 @@ checkpoint_callback = ModelCheckpoint(
     monitor="val_macro",
     mode="max",
     filepath='models/asag/{epoch}-{val_macro:.4f}',
-    save_top_k=1
+    save_top_k=3
 )
 t5_test = LitT5()
 trainer = pl.Trainer(
-    gpus=2,
-    num_nodes=1,
-    distributed_backend='ddp',
-    max_epochs=16,
+    gpus=1,
+    #num_nodes=1,
+    #distributed_backend='ddp',
+    max_epochs=12,
     accumulate_grad_batches=8,
     checkpoint_callback=checkpoint_callback
 )
