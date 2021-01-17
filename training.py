@@ -8,11 +8,11 @@ checkpoint_callback = ModelCheckpoint(
     filepath='models/kn1_t5_{epoch}-{val_macro:.4f}',
     save_top_k=3
 )
-t5_test = LitT5(6, True)
+t5_test = LitT5(8, True)
 trainer = pl.Trainer(
-    gpus=1,
-    #num_nodes=1,
-    #accelerator='ddp',
+    gpus=4,
+    num_nodes=1,
+    accelerator='ddp',
     max_epochs=16,
     # accumulate_grad_batches=8,
     checkpoint_callback=checkpoint_callback,
