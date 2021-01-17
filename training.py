@@ -10,7 +10,7 @@ checkpoint_callback = ModelCheckpoint(
 )
 t5_test = LitT5(8, True)
 trainer = pl.Trainer(
-    gpus=4,
+    gpus=2,
     num_nodes=1,
     accelerator='ddp',
     max_epochs=16,
