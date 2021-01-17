@@ -1,10 +1,10 @@
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 
 
 # data loader for a given data set
-class SemEvalDataset(Dataset):
+class T5Dataset(Dataset):
 
     def __init__(self, filename):
         self.data = np.load(filename, allow_pickle=True)
@@ -13,5 +13,8 @@ class SemEvalDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        text, lab = self.data[index]
-        return torch.tensor(text).long(), torch.tensor(lab).long()
+        data = self.data[index]
+        input = data['input']
+        output = data['answer']
+        label = data['label']
+        return torch.tensor(input).long(), torch.tensor(output).long(), torch.tensor(label).long()

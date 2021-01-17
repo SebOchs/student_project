@@ -1,50 +1,139 @@
 import torch
 import numpy as np
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader, random_split, RandomSampler
+from torch.utils.data import DataLoader, random_split, ConcatDataset
 from transformers import T5ForConditionalGeneration, Adafactor, T5Tokenizer
-from utils import macro_f1, weighted_f1
+from utils import macro_f1, weighted_f1, get_subset, sep_val, split
 import dataloading as dl
 import warnings
-from numpy.random import seed
+import datasets
 
+sacrebleu = datasets.load_metric('sacrebleu')
+# bert_score = datasets.load_metric('bertscore')
 warnings.filterwarnings("ignore")
-seed(42)
+
 
 class LitT5(pl.LightningModule):
 
-    def __init__(self):
+    def __init__(self, batch_size, mode):
         super(LitT5, self).__init__()
         self.model = T5ForConditionalGeneration.from_pretrained('t5-base', n_positions=128)
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
-        self.train_data, self.val_data = random_split(dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_train.npy"),
-                                                      [4472, 497], generator=torch.Generator())
-        self.test_data = dl.SemEvalDataset("datasets/preprocessed/sciEntsBank_test_ua.npy")
+        self.mode = mode
+        self.batch_size = batch_size
+        # multitasking:
+        if mode:
+            data = dl.T5Dataset('datasets/preprocessed/kn1_train.npy')
+            self.train_data, self.val_data = random_split(data, split(len(data)))
+            self.test_data = self.val_data
+        # fine tuning
+        else:
+            # datasets
+            seb = dl.T5Dataset("datasets/preprocessed/sciEntsBank_train.npy")
+            cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
+            glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
+            # SEB data set
+            self.seb_train_data, self.seb_val_data = random_split(seb, split(len(seb)))
+            self.seb_test_data = dl.T5Dataset("datasets/preprocessed/sciEntsBank_test_ua.npy")
+            # ESNLI data set
+            self.esnli_train_data = dl.T5Dataset('datasets/preprocessed/esnli_train.npy')
+            self.esnli_val_data = dl.T5Dataset('datasets/preprocessed/esnli_val.npy')
+            self.esnli_test_data = dl.T5Dataset('datasets/preprocessed/esnli_test.npy')
+            # CosE data set
+            self.cose_train_data, self.cose_val_data = random_split(cose, split(len(cose)))
+            self.cose_test_data = dl.T5Dataset('datasets/preprocessed/cose_test.npy')
+            # GLUCOSE data set
+            self.glucose_train_data, self.glucose_val_data = random_split(glucose, split(len(glucose)))
+            self.glucose_test_data = dl.T5Dataset('datasets/preprocessed/glucose_test.npy')
+            # Combine data sets
+            self.train_data = ConcatDataset([self.seb_train_data, self.esnli_train_data, self.cose_train_data,
+                                             self.glucose_train_data])
+            self.val_data = ConcatDataset([self.seb_val_data, self.esnli_val_data, self.cose_val_data,
+                                           self.glucose_val_data])
+            self.test_data = ConcatDataset([self.seb_test_data, self.esnli_test_data, self.cose_test_data,
+                                            self.glucose_test_data])
+        self.save_hyperparameters()
 
     def forward(self, tok_seq):
-        return self.tokenizer.decode(self.model.generate(tok_seq)[0])
+        return self.tokenizer.decode(self.model.generate(tok_seq, max_length=64)[0], skip_special_tokens=True)
 
     def training_step(self, batch, batch_idx):
-        text, lab = batch
-        return self.model(input_ids=text, labels=lab)[0].mean()
+        text, answer, lab = batch
+        return self.model(input_ids=text, labels=answer)[0].mean()
 
     def validation_step(self, batch, batch_idx):
-        text, lab = batch
-        return {'prediction': self(text), 'truth': self.tokenizer.decode(lab.squeeze())}
+        text, answer, lab = batch
+        return {'prediction': self(text),
+                'truth': self.tokenizer.decode(answer.squeeze(), skip_special_tokens=True),
+                'label': self.tokenizer.decode(lab.squeeze(), skip_special_tokens=True),
+                'original': self.tokenizer.decode(text.squeeze(), skip_special_tokens=True),
+                }
 
     def validation_epoch_end(self, outputs):
-        pred = [x['prediction'] for x in outputs]
-        lab = [x['truth'] for x in outputs]
-        acc_stack = np.stack((pred, lab), axis=0)
-        acc = np.sum([1 for i in range(len(acc_stack.T)) if acc_stack[0, i] == acc_stack[1, i]]) / len(acc_stack.T)
-        m_f1 = macro_f1(pred, lab)
-        w_f1 = weighted_f1(pred, lab)
-        print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
-        self.log("val_macro", m_f1)
+        if self.mode:
+            val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
+                        [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
+            text = [x['original'] for x in outputs]
+            acc_data = np.array(val_data[2:])
+            val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
+            val_weighted = weighted_f1(acc_data[1], acc_data[0])
+            val_macro = macro_f1(acc_data[1], acc_data[0])
+            self.log('val_macro', val_macro)
+            print('\nKN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}'.format(val_acc, val_macro, val_weighted))
+
+        else:
+            # separate outputs
+            val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs], [x['label'] for x in outputs]]
+            text = [x['original'] for x in outputs]
+            # separate outputs to tasks
+            seb_val = np.array(sep_val(val_data, [i for i, j in enumerate(text) if 'asag:' in j]))
+            esnli_val = np.array(sep_val(val_data, [i for i, j in enumerate(text) if ' esnli:' in j]))
+            cose_val = np.array(sep_val(val_data, [i for i, j in enumerate(text) if ' cose:' in j]))
+            glucose_val = np.array(sep_val(val_data, [i for i, j in enumerate(text) if ' glucose:' in j]))
+            # validate seb
+            seb_acc_stack = seb_val[:, :2]
+            seb_acc = np.sum(seb_acc_stack[:, 0] == seb_acc_stack[:, 1]) / seb_acc_stack.shape[0]
+            seb_m_f1 = macro_f1(seb_acc_stack[:, 0], seb_acc_stack[:, 1])
+            seb_w_f1 = weighted_f1(seb_acc_stack[:, 0], seb_acc_stack[:, 1])
+
+            print('\nSEB: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}'.format(seb_acc, seb_m_f1, seb_w_f1))
+            # validate esnli
+            esnli_acc_stack = esnli_val[:, [0, 2]]
+            esnli_acc = np.sum(esnli_acc_stack[:, 0] == esnli_acc_stack[:, 1]) / esnli_acc_stack.shape[0]
+            esnli_m_f1 = macro_f1(esnli_acc_stack[:, 0], esnli_acc_stack[:, 1])
+            esnli_w_f1 = weighted_f1(esnli_acc_stack[:, 0], esnli_acc_stack[:, 1])
+            esnli_bleu = sacrebleu.compute(predictions=esnli_val[:, 0], references=[[x] for x in esnli_val[:, 1]])
+            # esnli_bert = bert_score.compute(predictions=esnli_val[:, 0], references=[[x] for x in esnli_val[:, 1]],
+            #                                lang='en')
+            print('ESNLI: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, BLEU = {:.4f}'  # , bertscore = {:.4f}\n'
+                .format(
+                esnli_acc, esnli_m_f1, esnli_w_f1, esnli_bleu['score'],  # torch.mean(esnli_bert['f1']).item()
+            ))
+            # validate cose
+            cose_acc_stack = cose_val[:, [0, 2]]
+            cose_acc = np.sum(cose_acc_stack[:, 0] == cose_acc_stack[:, 1]) / esnli_acc_stack.shape[0]
+            cose_bleu = sacrebleu.compute(predictions=cose_val[:, 0], references=[[x] for x in cose_val[:, 1]])
+            # cose_bert = torch.mean(bert_score.compute(predictions=cose_val[:, 0], references=[[x] for x in cose_val[:,
+            # 1]], lang='en')['f1']).item()
+            print('Cos-E: Accuracy = {:.4f}, BLEU = {:.4f}'  # , bertscore = {:.4f}\n'
+                .format(
+                cose_acc, cose_bleu['score'],  # cose_bert
+            ))
+            # validate glucose
+
+            glucose_bleu = sacrebleu.compute(predictions=glucose_val[:, 0], references=[[x] for x in glucose_val[:, 1]])
+            # glucose_bert = torch.mean(bert_score.compute(predictions=glucose_val[:, 0],
+            #                                        references=[[x] for x in glucose_val[:, 1]], lang='en')['f1']).item()
+            print('GLUCOSE: BLEU = {:.4f}'  # , bertscore = {:.4f}\n'
+                  .format(glucose_bleu['score']
+                          # , glucose_bert
+                          ))
+
+            self.log("val_macro", seb_m_f1)
 
     # prepared for later use
     def test_step(self, batch, batch_idx):
-        text, lab = batch
+        text, answer, lab = batch
         return {'prediction': self(text), 'truth': self.tokenizer.decode(lab.squeeze())}
 
     def test_epoch_end(self, outputs):
@@ -63,17 +152,33 @@ class LitT5(pl.LightningModule):
         print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
 
     def configure_optimizers(self):
-        return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
+        return Adafactor(self.model.parameters(), lr=0.001, warmup_init=False, relative_step=False)
 
     def train_dataloader(self):
-        train_sampler = RandomSampler(self.train_data)
-        return DataLoader(self.train_data, batch_size=4, num_workers=0, sampler=train_sampler)
+        if self.mode:
+            train_set = self.train_data
+        else:
+            train_length = len(self.seb_train_data)
+            train_set = ConcatDataset([
+                get_subset(self.esnli_train_data, train_length),
+                get_subset(self.cose_train_data, train_length),
+                get_subset(self.glucose_train_data, train_length),
+                self.seb_train_data])
+        return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=True)
 
     def val_dataloader(self):
-        """
-        val_sampler = RandomSampler(self.val_data)
-        """
-        return DataLoader(self.val_data, batch_size=1, num_workers=0, shuffle=False, sampler=None)
+        if self.mode:
+            val_set = self.val_data
+        else:
+            val_length = len(self.seb_val_data)
+            val_set = ConcatDataset([
+                get_subset(self.esnli_val_data, val_length),
+                get_subset(self.cose_val_data, val_length),
+                get_subset(self.glucose_val_data, val_length),
+                self.seb_val_data
+            ])
+
+        return DataLoader(val_set, batch_size=1, num_workers=0, shuffle=True)
 
     def test_dataloader(self):
-        return DataLoader(self.test_data, batch_size=1, num_workers=0, shuffle=False, sampler=None)
+        return DataLoader(self.test_data, batch_size=1, num_workers=0, shuffle=False)

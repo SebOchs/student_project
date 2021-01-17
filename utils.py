@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def f1(pr, tr, class_num):
@@ -40,14 +41,9 @@ def macro_f1(predictions, truth):
     :param truth: list of actual values
     :return: macro f1 between model predictions and actual values
     """
+    different_f1s = [f1(predictions, truth, lab) for lab in set(truth)]
+    return sum(different_f1s) / len(different_f1s)
 
-    f1_0 = f1(predictions, truth, "incorrect")
-    f1_1 = f1(predictions, truth, "contradict")
-    f1_2 = f1(predictions, truth, "correct")
-    if np.sum([x == "contradict" for x in truth]) == 0:
-        return (f1_0 + f1_2) / 2
-    else:
-        return (f1_0 + f1_1 + f1_2) / 3
 
 
 def weighted_f1(predictions, truth):
@@ -57,11 +53,20 @@ def weighted_f1(predictions, truth):
     :param truth: list of actual values
     :return: weighted f1 between model predictions and actual values
     """
+    different_f1s = [f1(predictions, truth, lab) for lab in set(truth)]
+    different_weights = [np.sum([x == lab for x in truth]) for lab in set(truth)]
+    return sum(x*y for x, y in zip(different_f1s, different_weights)) / len(predictions)
 
-    weight_0 = np.sum([x == "incorrect" for x in truth])
-    weight_1 = np.sum([x == "contradict" for x in truth])
-    weight_2 = np.sum([x == "correct" for x in truth])
-    f1_0 = f1(predictions, truth, "incorrect")
-    f1_1 = f1(predictions, truth, "contradict")
-    f1_2 = f1(predictions, truth, "correct")
-    return (weight_0 * f1_0 + weight_1 * f1_1 + weight_2 * f1_2) / len(truth)
+
+def get_subset(to_subset, length):
+    indices = torch.randperm(len(to_subset))[:length]
+    return torch.utils.data.Subset(to_subset, indices)
+
+
+def sep_val(pred_lab_short, idx):
+    return list(zip([pred_lab_short[0][i] for i in idx], [pred_lab_short[1][i] for i in idx],
+                    [pred_lab_short[2][i] for i in idx]))
+
+
+def split(number, portion=0.9):
+    return [round(portion*number), round((1-portion)*number)]
