@@ -15,6 +15,8 @@ class T5Dataset(Dataset):
     def __getitem__(self, index):
         data = self.data[index]
         input = data['input']
+        input_attn = data['attn_input']
         output = data['answer']
         label = data['label']
-        return torch.tensor(input).long(), torch.tensor(output).long(), torch.tensor(label).long()
+        return torch.tensor(input).long(), torch.tensor(input_attn).long(), \
+               torch.tensor(output).long(), torch.tensor(label).long()

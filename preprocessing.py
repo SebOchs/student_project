@@ -7,7 +7,7 @@ import pandas
 import random
 import re
 
-tokenizer = T5Tokenizer.from_pretrained('t5-base')
+tokenizer = T5Tokenizer.from_pretrained('t5-large')
 MAX_TOKENS = 256
 
 
@@ -107,11 +107,13 @@ def preprocessing_kn1(path, file):
                     feedback = x.find('response_feedback').text
                     score = float(x.find('score').text)
                     ref = ref_answers[0].text
-                    text = "justify: kn: " + ref + tokenizer.eos_token + response
+                    text = "justify: score: " + ref + tokenizer.eos_token + response
                     label = str(score)
                     answer = str(score) + tokenizer.eos_token + "feedback: " + feedback
                     array.append({
                         "input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+                        "attn_input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').attention_mask[
+                                      :MAX_TOKENS],
                         "answer": tokenizer(answer, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
                         "label": tokenizer(label, max_length=MAX_TOKENS, padding='max_length').input_ids
                     })

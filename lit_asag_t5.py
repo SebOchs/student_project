@@ -17,7 +17,7 @@ class LitT5(pl.LightningModule):
 
     def __init__(self, batch_size, mode):
         super(LitT5, self).__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-base', n_positions=128)
+        self.model = T5ForConditionalGeneration.from_pretrained('t5-large', n_positions=256)
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.mode = mode
         self.batch_size = batch_size
@@ -54,16 +54,17 @@ class LitT5(pl.LightningModule):
                                             self.glucose_test_data])
         self.save_hyperparameters()
 
-    def forward(self, tok_seq):
-        return self.tokenizer.decode(self.model.generate(tok_seq, max_length=64)[0], skip_special_tokens=True)
+    def forward(self, tok_seq, attn_seq):
+        return self.tokenizer.decode(self.model.generate(tok_seq, attention_mask=attn_seq, max_length=64)[0],
+                                     skip_special_tokens=True)
 
     def training_step(self, batch, batch_idx):
-        text, answer, lab = batch
-        return self.model(input_ids=text, labels=answer)[0].mean()
+        text, text_attn, answer, lab = batch
+        return self.model(input_ids=text, attention_mask= text_attn, labels=answer)[0].mean()
 
     def validation_step(self, batch, batch_idx):
-        text, answer, lab = batch
-        return {'prediction': self(text),
+        text, text_attn, answer, lab = batch
+        return {'prediction': self(text, text_attn),
                 'truth': self.tokenizer.decode(answer.squeeze(), skip_special_tokens=True),
                 'label': self.tokenizer.decode(lab.squeeze(), skip_special_tokens=True),
                 'original': self.tokenizer.decode(text.squeeze(), skip_special_tokens=True),
