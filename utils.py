@@ -80,8 +80,11 @@ def MSE(pred, labs):
         except ValueError:
             return False
     idx = np.where(np.array([isfloat(x) for x in pred]) == True)
-    pred = np.array([float(x) for x in pred[idx]])
-    lab = np.array([float(x) for x in labs[idx]])
-    print('Invalid MSE examples: ', labs.size - idx[0].size)
-    return mean_squared_error(lab, pred)
+    if idx[0].size > 0:
+        pred = np.array([float(x) for x in pred[idx]])
+        lab = np.array([float(x) for x in labs[idx]])
+        print('Invalid MSE examples: ', labs.size - idx[0].size)
+        return mean_squared_error(lab, pred)
+    else:
+        return 1
 
