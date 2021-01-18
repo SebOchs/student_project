@@ -80,7 +80,10 @@ class LitT5(pl.LightningModule):
             val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
             val_weighted = weighted_f1(acc_data[1], acc_data[0])
             val_macro = macro_f1(acc_data[1], acc_data[0])
-            mse = MSE(acc_data[1], acc_data[0])
+            if len(acc_data[1]) > 0:
+                mse = MSE(acc_data[1], acc_data[0])
+            else:
+                mse = 1
             sacrebleu_score = sacrebleu.compute(predictions=[x['prediction'] for x in outputs],
                                                 references=[[x['truth']] for x in outputs])['score']
             self.log('bleu', sacrebleu_score)
