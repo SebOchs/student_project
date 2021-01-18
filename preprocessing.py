@@ -7,7 +7,7 @@ import pandas
 import random
 import re
 
-tokenizer = T5Tokenizer.from_pretrained('t5-large')
+tokenizer = T5Tokenizer.from_pretrained('google/t5-v1_1-base')
 MAX_TOKENS = 256
 
 

@@ -17,8 +17,8 @@ class LitT5(pl.LightningModule):
 
     def __init__(self, batch_size, mode):
         super(LitT5, self).__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-large', n_positions=256)
-        self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
+        self.model = T5ForConditionalGeneration.from_pretrained('google/t5-v1_1-base')
+        self.tokenizer = T5Tokenizer.from_pretrained('google/t5-v1_1-base')
         self.mode = mode
         self.batch_size = batch_size
         # multitasking:
