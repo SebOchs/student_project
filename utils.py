@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-
+from sklearn.metrics import mean_squared_error
 
 def f1(pr, tr, class_num):
     """
@@ -70,3 +70,18 @@ def sep_val(pred_lab_short, idx):
 
 def split(number, portion=0.9):
     return [round(portion*number), round((1-portion)*number)]
+
+
+def MSE(pred, labs):
+    def isfloat(value):
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+    idx = np.where(np.array([isfloat(x) for x in pred]) == True)
+    pred = np.array([float(x) for x in pred[idx]])
+    lab = np.array([float(x) for x in labs[idx]])
+    print('Invalid MSE examples: ', labs.size - idx[0].size)
+    return mean_squared_error(lab, pred)
+

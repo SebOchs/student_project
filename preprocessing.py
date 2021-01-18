@@ -107,16 +107,17 @@ def preprocessing_kn1(path, file):
                     feedback = x.find('response_feedback').text
                     score = float(x.find('score').text)
                     ref = ref_answers[0].text
-                    text = "justify: score: " + ref + tokenizer.eos_token + response
+                    text = "score: " + ref + tokenizer.eos_token + response
                     label = str(score)
                     answer = str(score) + tokenizer.eos_token + "feedback: " + feedback
-                    array.append({
-                        "input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                        "attn_input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').attention_mask[
+                    array.append([
+                        tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+                        tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[
                                       :MAX_TOKENS],
-                        "answer": tokenizer(answer, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                        "label": tokenizer(label, max_length=MAX_TOKENS, padding='max_length').input_ids
-                    })
+                        tokenizer(answer.lower(), max_length=64, padding='max_length').input_ids[:64],
+                        tokenizer(label, max_length=4, padding='max_length').input_ids
+                    ])
+
     save(file + '_train', array)
 
 

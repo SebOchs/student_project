@@ -3,7 +3,7 @@ import numpy as np
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, random_split, ConcatDataset
 from transformers import T5ForConditionalGeneration, Adafactor, T5Tokenizer
-from utils import macro_f1, weighted_f1, get_subset, sep_val, split
+from utils import macro_f1, weighted_f1, get_subset, sep_val, split, MSE
 import dataloading as dl
 import warnings
 import datasets
@@ -17,8 +17,8 @@ class LitT5(pl.LightningModule):
 
     def __init__(self, batch_size, mode):
         super(LitT5, self).__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('google/t5-v1_1-base')
-        self.tokenizer = T5Tokenizer.from_pretrained('google/t5-v1_1-base')
+        self.model = T5ForConditionalGeneration.from_pretrained('t5-base')
+        self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.mode = mode
         self.batch_size = batch_size
         # multitasking:
@@ -55,12 +55,13 @@ class LitT5(pl.LightningModule):
         self.save_hyperparameters()
 
     def forward(self, tok_seq, attn_seq):
-        return self.tokenizer.decode(self.model.generate(tok_seq, attention_mask=attn_seq, max_length=4)[0],
+        return self.tokenizer.decode(self.model.generate(input_ids=tok_seq, attention_mask=attn_seq, min_length=32,
+                                                         max_length=64)[0],
                                      skip_special_tokens=True)
 
     def training_step(self, batch, batch_idx):
         text, text_attn, answer, lab = batch
-        return self.model(input_ids=text, attention_mask= text_attn, labels=lab)[0].mean()
+        return self.model(input_ids=text, attention_mask=text_attn, labels=answer)[0].mean()
 
     def validation_step(self, batch, batch_idx):
         text, text_attn, answer, lab = batch
@@ -79,8 +80,13 @@ class LitT5(pl.LightningModule):
             val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
             val_weighted = weighted_f1(acc_data[1], acc_data[0])
             val_macro = macro_f1(acc_data[1], acc_data[0])
+            mse = MSE(acc_data[1], acc_data[0])
+            sacrebleu_score = sacrebleu.compute(predictions=[x['prediction'] for x in outputs],
+                                                references=[[x['truth']] for x in outputs])['score']
+            self.log('bleu', sacrebleu_score)
             self.log('val_macro', val_macro)
-            print('\nKN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}'.format(val_acc, val_macro, val_weighted))
+            print('\nKN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}'.format(
+                val_acc, val_macro, val_weighted, mse, sacrebleu_score))
 
         else:
             # separate outputs
@@ -144,6 +150,7 @@ class LitT5(pl.LightningModule):
         acc = np.sum([1 for i in range(len(acc_stack.T)) if acc_stack[0, i] == acc_stack[1, i]]) / len(acc_stack.T)
         m_f1 = macro_f1(pred, lab)
         w_f1 = weighted_f1(pred, lab)
+
         print("Accuracy: " + str(acc)[:6])
         print("Macro-F1: " + str(m_f1)[:6])
         print("Weighted-F1 " + str(w_f1)[:6])
@@ -153,7 +160,7 @@ class LitT5(pl.LightningModule):
         print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
 
     def configure_optimizers(self):
-        return Adafactor(self.model.parameters(), lr=0.001, warmup_init=False, relative_step=False)
+        return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
 
     def train_dataloader(self):
         if self.mode:
@@ -165,7 +172,7 @@ class LitT5(pl.LightningModule):
                 get_subset(self.cose_train_data, train_length),
                 get_subset(self.glucose_train_data, train_length),
                 self.seb_train_data])
-        return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=True)
+        return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=False)
 
     def val_dataloader(self):
         if self.mode:
