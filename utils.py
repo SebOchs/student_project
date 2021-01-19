@@ -83,7 +83,7 @@ def MSE(pred, labs):
     if idx[0].size > 0:
         pred = np.array([float(x) for x in pred[idx]])
         lab = np.array([float(x) for x in labs[idx]])
-        print('Invalid MSE examples: ', labs.size - idx[0].size)
+        print('\nInvalid MSE examples: ', labs.size - idx[0].size)
         return mean_squared_error(lab, pred)
     else:
         return 1

@@ -55,8 +55,8 @@ class LitT5(pl.LightningModule):
         self.save_hyperparameters()
 
     def forward(self, tok_seq, attn_seq):
-        return self.tokenizer.decode(self.model.generate(input_ids=tok_seq, attention_mask=attn_seq, min_length=32,
-                                                         max_length=64)[0],
+        return self.tokenizer.decode(self.model.generate(input_ids=tok_seq, attention_mask=attn_seq, min_length=11,
+                                                         max_length=128)[0],
                                      skip_special_tokens=True)
 
     def training_step(self, batch, batch_idx):
