@@ -3,7 +3,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from lit_asag_t5 import LitT5
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='bleu',
+    monitor='my_metric',
     mode="max",
     filepath='models/kn1_t5_{epoch}-{bleu:.4f}',
     save_top_k=3

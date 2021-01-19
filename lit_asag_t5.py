@@ -88,6 +88,7 @@ class LitT5(pl.LightningModule):
                                                 references=[[x['truth']] for x in outputs])['score']
             self.log('bleu', sacrebleu_score)
             self.log('val_macro', val_macro)
+            self.log('my_metric', sacrebleu_score*val_macro)
             print('\nKN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}'.format(
                 val_acc, val_macro, val_weighted, mse, sacrebleu_score))
 
