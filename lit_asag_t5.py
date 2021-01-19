@@ -80,6 +80,7 @@ class LitT5(pl.LightningModule):
             if len(acc_data[1]) > 0:
                 val = validation_metrics(acc_data[1], acc_data[0])
             else:
+                print('\nInvalid val except bleu')
                 val = {"mse": 1, "acc": 0, "macro": 0, "weighted": 0}
             sacrebleu_score = sacrebleu.compute(predictions=[x['prediction'] for x in outputs],
                                                 references=[[x['truth']] for x in outputs])['score']
