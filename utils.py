@@ -97,5 +97,5 @@ def validation_metrics(pred, labs):
                 }
     else:
         print('\nInvalid validation')
-        return 1
+        return {"mse": 1, "acc": 0, "macro": 0, "weighted": 0}
 
