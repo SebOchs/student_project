@@ -7,6 +7,7 @@ from utils import macro_f1, weighted_f1, get_subset, sep_val, split, validation_
 import dataloading as dl
 import warnings
 import datasets
+import random
 
 sacrebleu = datasets.load_metric('sacrebleu')
 # bert_score = datasets.load_metric('bertscore')
@@ -144,24 +145,52 @@ class LitT5(pl.LightningModule):
 
     # prepared for later use
     def test_step(self, batch, batch_idx):
-        text, answer, lab = batch
-        return {'prediction': self(text), 'truth': self.tokenizer.decode(lab.squeeze())}
+        text, text_attn, answer, lab = batch
+        return {'prediction': self(text, text_attn),
+                'truth': self.tokenizer.decode(answer.squeeze(), skip_special_tokens=True),
+                'label': self.tokenizer.decode(lab.squeeze(), skip_special_tokens=True),
+                'original': self.tokenizer.decode(text.squeeze(), skip_special_tokens=True),
+                }
 
     def test_epoch_end(self, outputs):
-        pred = [x['prediction'] for x in outputs]
-        lab = [x['truth'] for x in outputs]
-        acc_stack = np.stack((pred, lab), axis=0)
-        acc = np.sum([1 for i in range(len(acc_stack.T)) if acc_stack[0, i] == acc_stack[1, i]]) / len(acc_stack.T)
-        m_f1 = macro_f1(pred, lab)
-        w_f1 = weighted_f1(pred, lab)
+        if self.mode:
+            val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
+                        [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
+            text = [x['original'] for x in outputs]
+            acc_data = np.array(val_data[2:])
 
-        print("Accuracy: " + str(acc)[:6])
-        print("Macro-F1: " + str(m_f1)[:6])
-        print("Weighted-F1 " + str(w_f1)[:6])
-        self.log("test_macro", m_f1)
-        self.log("test_weighted", w_f1)
-        self.log("test_acc", acc)
-        print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
+            if len(acc_data[1]) > 0:
+                val = validation_metrics(acc_data[1], acc_data[0])
+            else:
+                print('\nInvalid val except bleu')
+                val = {"mse": 1, "acc": 0, "macro": 0, "weighted": 0}
+            sacrebleu_score = sacrebleu.compute(predictions=[x['prediction'] for x in outputs],
+                                                references=[[x['truth']] for x in outputs])['score']
+            self.log('bleu', sacrebleu_score)
+            self.log('val_macro', val['macro'])
+            self.log('my_metric', sacrebleu_score * val['macro'])
+            examples = ["Data instance: " + x['original'] + '\nPredicted feedback: ' + x['prediction'] +
+                        '\nOriginal feedback' + x['truth'] for x in outputs]
+            np.random.shuffle(examples)
+            for i in range(len(examples[:10])):
+                print(str(i) + ' : ' + examples[i])
+            print('\nKN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}'.format(
+                val['acc'], val['macro'], val['weighted'], val['mse'], sacrebleu_score))
+        else:
+            pred = [x['prediction'] for x in outputs]
+            lab = [x['truth'] for x in outputs]
+            acc_stack = np.stack((pred, lab), axis=0)
+            acc = np.sum([1 for i in range(len(acc_stack.T)) if acc_stack[0, i] == acc_stack[1, i]]) / len(acc_stack.T)
+            m_f1 = macro_f1(pred, lab)
+            w_f1 = weighted_f1(pred, lab)
+
+            print("Accuracy: " + str(acc)[:6])
+            print("Macro-F1: " + str(m_f1)[:6])
+            print("Weighted-F1 " + str(w_f1)[:6])
+            self.log("test_macro", m_f1)
+            self.log("test_weighted", w_f1)
+            self.log("test_acc", acc)
+            print("Accuracy: " + str(acc)[:6] + ", Macro-F1: " + str(m_f1)[:6] + ", Weighted-F1 " + str(w_f1)[:6])
 
     def configure_optimizers(self):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
