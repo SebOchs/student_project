@@ -95,7 +95,7 @@ def preprocessing_glucose(folder_path, file_path):
 
 def preprocessing_kn1(path, file):
     array = []
-    set_data = []
+
     for files in os.listdir(path):
         if files.endswith('.xml'):
             root = et.parse(path + '/' + files).getroot()
@@ -114,10 +114,10 @@ def preprocessing_kn1(path, file):
                         tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
                         tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[
                                       :MAX_TOKENS],
-                        tokenizer(answer.lower(), max_length=64, padding='max_length').input_ids[:128],
+                        tokenizer(answer.lower(), max_length=128, padding='max_length').input_ids[:128],
                         tokenizer(label, max_length=4, padding='max_length').input_ids
                     ])
-                    set_data.append(len(tokenizer(answer.lower()).input_ids))
+
 
     save(file + '_train', array)
 

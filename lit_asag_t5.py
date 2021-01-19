@@ -3,7 +3,7 @@ import numpy as np
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, random_split, ConcatDataset
 from transformers import T5ForConditionalGeneration, Adafactor, T5Tokenizer
-from utils import macro_f1, weighted_f1, get_subset, sep_val, split, MSE
+from utils import macro_f1, weighted_f1, get_subset, sep_val, split, validation_metrics
 import dataloading as dl
 import warnings
 import datasets
@@ -77,20 +77,19 @@ class LitT5(pl.LightningModule):
                         [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
             text = [x['original'] for x in outputs]
             acc_data = np.array(val_data[2:])
-            val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
-            val_weighted = weighted_f1(acc_data[1], acc_data[0])
-            val_macro = macro_f1(acc_data[1], acc_data[0])
             if len(acc_data[1]) > 0:
-                mse = MSE(acc_data[1], acc_data[0])
+                val = validation_metrics(acc_data[1], acc_data[0])
             else:
-                mse = 1
+                val = {"mse": 1, "acc": 0, "macro": 0, "weighted": 0}
             sacrebleu_score = sacrebleu.compute(predictions=[x['prediction'] for x in outputs],
                                                 references=[[x['truth']] for x in outputs])['score']
             self.log('bleu', sacrebleu_score)
-            self.log('val_macro', val_macro)
-            self.log('my_metric', sacrebleu_score*val_macro)
+            self.log('val_macro', val['macro'])
+            self.log('my_metric', sacrebleu_score * val['macro'])
+
             print('\nKN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}'.format(
-                val_acc, val_macro, val_weighted, mse, sacrebleu_score))
+                val['acc'], val['macro'], val['weighted'], val['mse'], sacrebleu_score))
+
 
         else:
             # separate outputs

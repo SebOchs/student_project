@@ -72,7 +72,7 @@ def split(number, portion=0.9):
     return [round(portion*number), round((1-portion)*number)]
 
 
-def MSE(pred, labs):
+def validation_metrics(pred, labs):
     def isfloat(value):
         try:
             float(value)
@@ -81,10 +81,21 @@ def MSE(pred, labs):
             return False
     idx = np.where(np.array([isfloat(x) for x in pred]) == True)
     if idx[0].size > 0:
-        pred = np.array([float(x) for x in pred[idx]])
+        preds = np.array([float(x) for x in pred[idx]])
         lab = np.array([float(x) for x in labs[idx]])
-        print('\nInvalid MSE examples: ', labs.size - idx[0].size)
-        return mean_squared_error(lab, pred)
+        new_idx = np.where(preds <= 1)
+        print('\nInvalid validation examples: ', labs.size - new_idx[0].size)
+        """
+        val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
+        val_weighted = weighted_f1(acc_data[1], acc_data[0])
+        val_macro = macro_f1(acc_data[1], acc_data[0])
+        """
+        return {"mse": mean_squared_error(lab[new_idx], preds[new_idx]),
+                "acc": np.sum(lab[new_idx] == preds[new_idx]) / new_idx[0].size,
+                "macro": macro_f1(preds[new_idx], lab[new_idx]),
+                "weighted": weighted_f1(preds[new_idx], lab[new_idx])
+                }
     else:
+        print('\nInvalid validation')
         return 1
 
