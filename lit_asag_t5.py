@@ -170,7 +170,7 @@ class LitT5(pl.LightningModule):
             self.log('val_macro', val['macro'])
             self.log('my_metric', sacrebleu_score * val['macro'])
             examples = ["Data instance: " + x['original'] + '\nPredicted feedback: ' + x['prediction'] +
-                        '\nOriginal feedback' + x['truth'] for x in outputs]
+                        '\nOriginal feedback: ' + x['truth'] for x in outputs]
             np.random.shuffle(examples)
             for i in range(len(examples[:10])):
                 print(str(i) + ' : ' + examples[i])
