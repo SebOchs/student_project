@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from sklearn.metrics import mean_squared_error
 
+
 def f1(pr, tr, class_num):
     """
     Calculates F1 score for a given class
@@ -45,7 +46,6 @@ def macro_f1(predictions, truth):
     return sum(different_f1s) / len(different_f1s)
 
 
-
 def weighted_f1(predictions, truth):
     """
     Calculates weighted f1 score, where all classes have different weights based on appearance
@@ -55,7 +55,7 @@ def weighted_f1(predictions, truth):
     """
     different_f1s = [f1(predictions, truth, lab) for lab in set(truth)]
     different_weights = [np.sum([x == lab for x in truth]) for lab in set(truth)]
-    return sum(x*y for x, y in zip(different_f1s, different_weights)) / len(predictions)
+    return sum(x * y for x, y in zip(different_f1s, different_weights)) / len(predictions)
 
 
 def get_subset(to_subset, length):
@@ -69,33 +69,34 @@ def sep_val(pred_lab_short, idx):
 
 
 def split(number, portion=0.9):
-    return [round(portion*number), round((1-portion)*number)]
+    return [round(portion * number), round((1 - portion) * number)]
 
 
-def validation_metrics(pred, labs):
+def mse(pred, labs):
     def isfloat(value):
         try:
             float(value)
             return True
         except ValueError:
             return False
+
     idx = np.where(np.array([isfloat(x) for x in pred]) == True)
     if idx[0].size > 0:
         preds = np.array([float(x) for x in pred[idx]])
         lab = np.array([float(x) for x in labs[idx]])
-        new_idx = np.where(preds <= 1)
-        print('\nInvalid validation examples: ', labs.size - new_idx[0].size)
-        """
-        val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
-        val_weighted = weighted_f1(acc_data[1], acc_data[0])
-        val_macro = macro_f1(acc_data[1], acc_data[0])
-        """
-        return {"mse": mean_squared_error(lab[new_idx], preds[new_idx]),
-                "acc": np.sum(lab[new_idx] == preds[new_idx]) / new_idx[0].size,
-                "macro": macro_f1(preds[new_idx], lab[new_idx]),
-                "weighted": weighted_f1(preds[new_idx], lab[new_idx])
-                }
+        if lab.size - idx[0].size > 0:
+            print('\nInvalid validation examples: ', labs.size - idx[0].size)
+        mse_val = mean_squared_error(lab, preds)
+        out_of_bound = np.sum(preds > 1) + np.sum(preds < 0)
+        if out_of_bound > 0:
+            print("\nMSE out of bound values: ", out_of_bound)
+        if mse_val > 1:
+            print('MSE greater than 1')
+            return 1, labs.size - idx[0].size
+        else:
+            return mse_val, labs.size - idx[0].size
+
     else:
         print('\nInvalid validation')
-        return {"mse": 1, "acc": 0, "macro": 0, "weighted": 0}
+        return 1, labs.size - idx[0].size
 

@@ -105,6 +105,8 @@ def preprocessing_kn1(path, file):
                 for x in stud_answers:
                     response = x.find('response').text
                     feedback = x.find('response_feedback').text
+                    # debug print
+                    # print(file + '/' + files, response)
                     score = float(x.find('score').text)
                     ref = ref_answers[0].text
                     text = "score: " + ref + tokenizer.eos_token + response
