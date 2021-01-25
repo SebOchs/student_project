@@ -6,6 +6,7 @@ from datasets import load_dataset
 import pandas
 import random
 import re
+from collections import Counter
 
 tokenizer = T5Tokenizer.from_pretrained('google/t5-v1_1-base')
 MAX_TOKENS = 256
@@ -95,7 +96,7 @@ def preprocessing_glucose(folder_path, file_path):
 
 def preprocessing_kn1(path, file):
     array = []
-
+    test = []
     for files in os.listdir(path):
         if files.endswith('.xml'):
             root = et.parse(path + '/' + files).getroot()
@@ -117,14 +118,16 @@ def preprocessing_kn1(path, file):
                         tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[
                                       :MAX_TOKENS],
                         tokenizer(answer.lower(), max_length=128, padding='max_length').input_ids[:128],
-                        tokenizer(label, max_length=4, padding='max_length').input_ids
+                        tokenizer(label, max_length=4, padding='max_length').input_ids,
+                        x.find('score').text
                     ])
+    # x = Counter([float(x[4]) for x in array])
+    print(x)
+    save(file, array)
 
+preprocessing_kn1('datasets/raw/kn1/unseen_answers', 'datasets/preprocessed/kn1_ua')
+preprocessing_kn1('datasets/raw/kn1/training', 'datasets/preprocessed/kn1_train')
 
-    save(file + '_train', array)
-
-
-preprocessing_kn1('datasets/raw/kn1', 'datasets/preprocessed/kn1')
 """
 preprocessing_glucose('datasets/raw/GLUCOSE_training_data_final.csv', 'datasets/preprocessed/glucose')
 preprocessing_cose('datasets/preprocessed/cose_train', 'train')

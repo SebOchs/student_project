@@ -11,6 +11,7 @@ import datasets
 
 sacrebleu = datasets.load_metric('sacrebleu')
 rouge = datasets.load_metric('rouge')
+meteor = datasets.load_metric('meteor')
 # bert_score = datasets.load_metric('bertscore')
 warnings.filterwarnings("ignore")
 
@@ -24,7 +25,7 @@ class LitFineT5(pl.LightningModule):
         self.batch_size = batch_size
         data = dl.T5Dataset('datasets/preprocessed/kn1_train.npy')
         self.train_data, self.val_data = random_split(data, split(len(data)))
-        self.test_data = self.val_data
+        self.test_data = dl.T5Dataset('datasets/preprocessed/kn1_ua.npy')
         self.save_hyperparameters()
 
     def forward(self, tok_seq, attn_seq):
@@ -54,13 +55,14 @@ class LitFineT5(pl.LightningModule):
         val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
         val_weighted = weighted_f1(acc_data[1], acc_data[0])
         val_macro = macro_f1(acc_data[1], acc_data[0])
-        sacrebleu_score = sacrebleu.compute(predictions=[x['prediction'] for x in outputs],
+        sacrebleu_score = sacrebleu.compute(predictions=val_data[0],
                                             references=[[x['truth']] for x in outputs])['score']
         rouge_score = rouge.compute(predictions=val_data[0], references=val_data[1])['rouge2'].mid.fmeasure
-
+        meteor_score = meteor.compute(predictions=val_data[0], references=val_data[1])['meteor']
         if len(acc_data[1]) > 0:
             mse_val, invalid = mse(acc_data[1], acc_data[0])
-            self.log('my_metric', sacrebleu_score / 100 * val_macro * (1 - mse_val) * (1 - invalid / len(acc_data[1])))
+            self.log('my_metric', (sacrebleu_score / 100 + rouge_score + meteor_score) / 3 * val_macro * (1 - mse_val) *
+                     (1 - invalid / len(acc_data[1])))
         else:
             print('\nInvalid mse')
             mse_val, invalid = 1
@@ -68,8 +70,9 @@ class LitFineT5(pl.LightningModule):
         self.log('bleu', sacrebleu_score)
         self.log('val_macro', val_macro)
         self.log('rouge', rouge_score)
-        print('KN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}'
-              .format(val_acc, val_macro, val_weighted, mse_val, sacrebleu_score, rouge_score))
+        self.log('meteor', meteor_score)
+        print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
+              .format(val_acc, val_macro, val_weighted, mse_val, sacrebleu_score, rouge_score, meteor_score))
 
     def test_step(self, batch, batch_idx):
         text, text_attn, answer, lab = batch
@@ -80,8 +83,6 @@ class LitFineT5(pl.LightningModule):
                 }
 
     def test_epoch_end(self, outputs):
-        # validation array, first entry are all full text predictions, second entry gold standard, third entry label
-        # and fourth entry label prediction
         val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
                     [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
         text = [x['original'] for x in outputs]
@@ -90,20 +91,24 @@ class LitFineT5(pl.LightningModule):
         val_weighted = weighted_f1(acc_data[1], acc_data[0])
         val_macro = macro_f1(acc_data[1], acc_data[0])
         sacrebleu_score = sacrebleu.compute(predictions=val_data[0],
-                                            references=val_data[1])['score']
+                                            references=[[x['truth']] for x in outputs])['score']
         rouge_score = rouge.compute(predictions=val_data[0], references=val_data[1])['rouge2'].mid.fmeasure
+        meteor_score = meteor.compute(predictions=val_data[0], references=val_data[1])['meteor']
         if len(acc_data[1]) > 0:
             mse_val, invalid = mse(acc_data[1], acc_data[0])
-            self.log('my_metric', sacrebleu_score / 100 * val_macro * (1 - mse_val) * (1 - invalid / len(acc_data[1])))
+            self.log('mse', mse_val)
         else:
             print('\nInvalid mse')
-            mse_val, invalid = 1
-            self.log('my_metric', 0)
+            self.log('mse', 0)
         self.log('bleu', sacrebleu_score)
-        self.log('val_macro', val_macro)
+        self.log('macro_f1', val_macro)
         self.log('rouge', rouge_score)
-        print('\nKN1: Accuracy = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}'
-            .format(val_acc, val_macro, val_weighted, mse_val, sacrebleu_score, rouge_score))
+        self.log('meteor', meteor_score)
+        self.log('acc', val_acc)
+        self.log('weighted', val_weighted)
+        print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
+              .format(val_acc, val_macro, val_weighted, mse_val, sacrebleu_score, rouge_score, meteor_score))
+
 
     def configure_optimizers(self):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
