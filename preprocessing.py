@@ -9,7 +9,7 @@ import re
 from collections import Counter
 
 tokenizer = T5Tokenizer.from_pretrained('google/t5-v1_1-base')
-MAX_TOKENS = 256
+MAX_TOKENS = 512
 
 
 def save(filepath, data):
@@ -110,7 +110,7 @@ def preprocessing_kn1(path, file):
                     # print(file + '/' + files, response)
                     score = float(x.find('score').text)
                     ref = ref_answers[0].text
-                    text = "score: " + ref + tokenizer.eos_token + response
+                    text = "score: " + response + tokenizer.eos_token + ref
                     label = str(score)
                     answer = str(score) + tokenizer.eos_token + "feedback: " + feedback
                     array.append([
@@ -119,10 +119,10 @@ def preprocessing_kn1(path, file):
                                       :MAX_TOKENS],
                         tokenizer(answer.lower(), max_length=128, padding='max_length').input_ids[:128],
                         tokenizer(label, max_length=4, padding='max_length').input_ids,
-                        x.find('score').text
+                        # len(tokenizer(text.lower()).input_ids)
                     ])
     # x = Counter([float(x[4]) for x in array])
-    print(x)
+
     save(file, array)
 
 preprocessing_kn1('datasets/raw/kn1/unseen_answers', 'datasets/preprocessed/kn1_ua')

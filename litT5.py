@@ -6,7 +6,8 @@ from utils import macro_f1, weighted_f1, get_subset, sep_val, split, mse
 import dataloading as dl
 import warnings
 import datasets
-
+import torch
+from collections import Counter
 
 
 sacrebleu = datasets.load_metric('sacrebleu')
@@ -24,7 +25,8 @@ class LitFineT5(pl.LightningModule):
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.batch_size = batch_size
         data = dl.T5Dataset('datasets/preprocessed/kn1_train.npy')
-        self.train_data, self.val_data = random_split(data, split(len(data)))
+        self.train_data, self.val_data = random_split(data, split(len(data)),
+                                                      generator=torch.Generator().manual_seed(42))
         self.test_data = dl.T5Dataset('datasets/preprocessed/kn1_ua.npy')
         self.save_hyperparameters()
 
