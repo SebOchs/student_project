@@ -85,10 +85,9 @@ class LitFineT5(pl.LightningModule):
                 }
 
     def test_epoch_end(self, outputs):
-        val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
+        val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs], [x['original'] for x in outputs],
                     [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
-        text = [x['original'] for x in outputs]
-        acc_data = np.array(val_data[2:])
+        acc_data = np.array(val_data[3:])
         val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
         val_weighted = weighted_f1(acc_data[1], acc_data[0])
         val_macro = macro_f1(acc_data[1], acc_data[0])
@@ -110,7 +109,7 @@ class LitFineT5(pl.LightningModule):
         self.log('weighted', val_weighted)
         print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
               .format(val_acc, val_macro, val_weighted, mse_val, sacrebleu_score, rouge_score, meteor_score))
-        np.save('data_for_bertscore.npy', np.array(val_data[:2]), allow_pickle=True)
+        np.save('data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
 
 
     def configure_optimizers(self):
