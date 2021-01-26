@@ -9,5 +9,6 @@ print("Bert score F1 mean", score['f1'].mean().item())
 
 for i in range(test_data.shape[1]):
     text = test_data[:, i]
+    print(str(i) + '. Original: ', text[2])
     print(str(i) + '. Prediction: ', text[0])
     print(str(i) + '. Truth: ', text[1])

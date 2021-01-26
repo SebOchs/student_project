@@ -52,15 +52,17 @@ class LitFineT5(pl.LightningModule):
         # and fourth entry label prediction
         val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
                     [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
+        pred = [x.split(' ', 2)[2] for x in val_data[0]]
+        truth = [x.split(' ', 2)[2] for x in val_data[1]]
         text = [x['original'] for x in outputs]
         acc_data = np.array(val_data[2:])
         val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
         val_weighted = weighted_f1(acc_data[1], acc_data[0])
         val_macro = macro_f1(acc_data[1], acc_data[0])
-        sacrebleu_score = sacrebleu.compute(predictions=val_data[0],
-                                            references=[[x] for x in val_data[1]])['score']
-        rouge_score = rouge.compute(predictions=val_data[0], references=val_data[1])['rouge2'].mid.fmeasure
-        meteor_score = meteor.compute(predictions=val_data[0], references=val_data[1])['meteor']
+        sacrebleu_score = sacrebleu.compute(predictions=pred,
+                                            references=[[x] for x in truth])['score']
+        rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
+        meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
         if len(acc_data[1]) > 0:
             mse_val, invalid = mse(acc_data[1], acc_data[0])
             self.log('my_metric', (sacrebleu_score / 100 + rouge_score + meteor_score) / 3 * val_macro * (1 - mse_val) *
@@ -87,14 +89,16 @@ class LitFineT5(pl.LightningModule):
     def test_epoch_end(self, outputs):
         val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs], [x['original'] for x in outputs],
                     [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
+        pred = [x.split(' ', 2)[2] for x in val_data[0]]
+        truth = [x.split(' ', 2)[2] for x in val_data[1]]
         acc_data = np.array(val_data[3:])
         val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
         val_weighted = weighted_f1(acc_data[1], acc_data[0])
         val_macro = macro_f1(acc_data[1], acc_data[0])
-        sacrebleu_score = sacrebleu.compute(predictions=val_data[0],
-                                            references=[[x] for x in val_data[1]])['score']
-        rouge_score = rouge.compute(predictions=val_data[0], references=val_data[1])['rouge2'].mid.fmeasure
-        meteor_score = meteor.compute(predictions=val_data[0], references=val_data[1])['meteor']
+        sacrebleu_score = sacrebleu.compute(predictions=pred,
+                                            references=[[x] for x in truth])['score']
+        rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
+        meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
         if len(acc_data[1]) > 0:
             mse_val, invalid = mse(acc_data[1], acc_data[0])
             self.log('mse', mse_val)
