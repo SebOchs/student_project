@@ -72,13 +72,16 @@ def split(number, portion=0.9):
     return [round(portion * number), round((1 - portion) * number)]
 
 
+def isfloat(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
 def mse(pred, labs):
-    def isfloat(value):
-        try:
-            float(value)
-            return True
-        except ValueError:
-            return False
+
 
     idx = np.where(np.array([isfloat(x) for x in pred]) == True)
     if idx[0].size > 0:
