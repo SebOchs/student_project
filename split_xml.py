@@ -33,7 +33,7 @@ def split_xml(folder_path, new_folder_path):
             for x in file_2:
                 child.append(x)
             root.append(child)
-            et.ElementTree(root).write(new_folder_path + '/training/' + files)
+            et.ElementTree(root).write(new_folder_path + '/training/' + files, encoding='utf-8', xml_declaration=True)
 
 
 
