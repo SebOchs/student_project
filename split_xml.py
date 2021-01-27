@@ -26,7 +26,8 @@ def split_xml(folder_path, new_folder_path):
             for x in file_1:
                 child.append(x)
             root.append(child)
-            et.ElementTree(root).write(new_folder_path + '/unseen_answers/' + files)
+            et.ElementTree(root).write(new_folder_path + '/unseen_answers/' + files,
+                                       encoding='utf-8', xml_declaration=True)
             # remove and replace for train set
             root.remove(root.find('studentAnswers'))
             child = et.Element('studentAnswers')
