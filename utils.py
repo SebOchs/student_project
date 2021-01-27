@@ -100,3 +100,35 @@ def mse(pred, labs):
         print('\nInvalid validation')
         return 1, labs.size - idx[0].size
 
+
+def extract_pred(predictions):
+    array = []
+    for pred in predictions:
+        try:
+            x = pred.split(':', 1)[1]
+        except IndexError:
+            try:
+                if pred.startswith('partially correct'):
+                    x = pred.split(' ', 1)[2]
+                else:
+                    x = pred.split(' ', 1)[1]
+            except IndexError:
+                x = pred
+        array.append(x)
+    return array
+
+
+def extract_label(predictions):
+    array = []
+    for pred in predictions:
+        if pred.startswith('correct'):
+            x = 'correct'
+        elif pred.startswith('incorrect'):
+            x = 'incorrect'
+        elif pred.startswith('partially correct'):
+            x = 'partially correct'
+        else:
+            x = 'wrong label'
+        array.append(x)
+    return array
+

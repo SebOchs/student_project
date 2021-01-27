@@ -125,8 +125,39 @@ def preprocessing_kn1(path, file):
 
     save(file, array)
 
-preprocessing_kn1('datasets/raw/kn1/unseen_answers', 'datasets/preprocessed/kn1_ua')
-preprocessing_kn1('datasets/raw/kn1/training', 'datasets/preprocessed/kn1_train')
+
+def preprocessing_asag_kn1(path, file):
+    array = []
+    for files in os.listdir(path):
+        if files.endswith('.xml'):
+            root = et.parse(path + '/' + files).getroot()
+            ref_answers = [x for x in root.find('referenceAnswers')]
+            stud_answers = [x for x in root.find('studentAnswers')]
+            if len(ref_answers) == 1:
+                for x in stud_answers:
+                    response = x.find('response').text
+                    feedback = x.find('response_feedback').text
+                    # debug print
+                    # print(file + '/' + files, response)
+                    label = x.find('verification_feedback').text
+                    ref = ref_answers[0].text
+                    text = "score: " + response + tokenizer.eos_token + ref
+
+                    answer = label + tokenizer.eos_token + "feedback: " + feedback
+                    array.append([
+                        tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+                        tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[:MAX_TOKENS],
+                        tokenizer(answer.lower(), max_length=128, padding='max_length').input_ids[:128],
+                        tokenizer(label.lower(), max_length=4, padding='max_length').input_ids,
+                        len(tokenizer(answer.lower()).input_ids)
+                    ])
+    x = min([x[4] for x in array])
+
+    save(file, array)
+
+
+preprocessing_asag_kn1('datasets/raw/kn1/unseen_answers', 'datasets/preprocessed/asag_kn1_ua')
+preprocessing_asag_kn1('datasets/raw/kn1/training', 'datasets/preprocessed/asag_kn1_train')
 
 """
 preprocessing_glucose('datasets/raw/GLUCOSE_training_data_final.csv', 'datasets/preprocessed/glucose')
