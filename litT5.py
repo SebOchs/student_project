@@ -213,12 +213,14 @@ class LitAsagFineT5(pl.LightningModule):
         meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
 
         self.log('bleu', sacrebleu_score)
-        self.log('val_macro', val_macro)
+        self.log('macro_f1', val_macro)
         self.log('rouge', rouge_score)
         self.log('meteor', meteor_score)
-        print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
-              .format(val_acc, val_macro, val_weighted, sacrebleu_score, rouge_score, meteor_score))
-        np.save('asag_kn1_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
+        self.log('acc', val_acc)
+        self.log('weighted', val_weighted)
+        print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
+              .format(val_acc, val_macro, val_weighted, mse_val, sacrebleu_score, rouge_score, meteor_score))
+        np.save('kn1_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
 
 
     def configure_optimizers(self):
