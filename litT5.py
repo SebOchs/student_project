@@ -113,7 +113,7 @@ class LitFineT5(pl.LightningModule):
         self.log('weighted', val_weighted)
         print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
               .format(val_acc, val_macro, val_weighted, mse_val, sacrebleu_score, rouge_score, meteor_score))
-        np.save('data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
+        np.save('kn1_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
 
 
     def configure_optimizers(self):
@@ -218,7 +218,7 @@ class LitAsagFineT5(pl.LightningModule):
         self.log('meteor', meteor_score)
         print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
               .format(val_acc, val_macro, val_weighted, sacrebleu_score, rouge_score, meteor_score))
-        np.save('data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
+        np.save('asag_kn1_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
 
 
     def configure_optimizers(self):
