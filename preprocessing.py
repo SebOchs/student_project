@@ -26,10 +26,12 @@ def preprocessing_semeval(folder_path, file_path):
                 text = "asag: reference: " + ref_answer.text[
                                              :-1] + tokenizer.eos_token + " student: " + stud_answer.text[:-1]
                 label = stud_answer.get('accuracy')
-                array.append({
-                    "input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                    "answer": tokenizer(label, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                    "label": tokenizer(label, max_length=MAX_TOKENS, padding='max_length').input_ids})
+                array.append([
+                    tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+                    tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+                    tokenizer(label.lower(), max_length=128, padding='max_length').input_ids[:128],
+                    tokenizer(label.lower(), max_length=4, padding='max_length').input_ids
+                ])
     save(file_path, array)
 
 
@@ -42,12 +44,12 @@ def preprocessing_esnli(file_path, mode):
         answer = ['neutral', 'contradictory', 'entailment'][int(i['label'])] + tokenizer.eos_token + ' explanation: '
         for j in [x for x in (i['explanation_1'], i['explanation_2'], i['explanation_3']) if len(x) > 0]:
             answer += j
-            array.append({
-                "input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                "answer": tokenizer(answer, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                "label": tokenizer(answer.split(" explanation:", 1)[0], max_length=MAX_TOKENS, padding='max_length')
-                             .input_ids[:MAX_TOKENS]
-            })
+            array.append([
+                tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+                tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[:MAX_TOKENS],
+                tokenizer(answer.lower(), max_length=128, padding='max_length').input_ids[:128],
+                tokenizer(answer.split(" explanation:", 1)[0].lower(), max_length=4, padding='max_length').input_ids
+            ])
     save(file_path, array)
 
 
@@ -59,12 +61,13 @@ def preprocessing_cose(file_path, mode):
         text = "justify: cose: question: " + i['question'] + tokenizer.eos_token + \
                ' '.join(' choice: ' + x + tokenizer.eos_token for x in i['choices'])
         answer = i['answer'] + tokenizer.eos_token + ' explanation: ' + i['abstractive_explanation']
-        array.append({
-            "input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-            "answer": tokenizer(answer, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-            "label": tokenizer(answer.split(" explanation:", 1)[0], max_length=MAX_TOKENS,
+        array.append([
+            tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+            tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[:MAX_TOKENS],
+            tokenizer(answer.lower(), max_length=128, padding='max_length').input_ids[:128],
+            tokenizer(answer.split(" explanation:", 1)[0].lower(), max_length=4,
                                padding='max_length').input_ids
-        })
+         ])
     save(file_path, array)
 
 
@@ -82,11 +85,12 @@ def preprocessing_glucose(folder_path, file_path):
         usable_answers = [date[x] for x in [8, 12, 16, 20, 24, 28, 32, 36, 40, 44] if date[x] != 'escaped']
         for j in usable_answers:
             answer = "explanation: " + remove_relation(j)
-            array.append({
-                "input": tokenizer(text, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                "answer": tokenizer(answer, max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
-                "label": tokenizer('', max_length=MAX_TOKENS, padding='max_length').input_ids
-            })
+            array.append([
+                tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
+                tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[:MAX_TOKENS],
+                tokenizer(answer.lower(), max_length=128, padding='max_length').input_ids[:128],
+                tokenizer('', max_length=4, padding='max_length').input_ids
+            ])
     # control_array = random.choices(array, k=10)
     random.shuffle(array)
     split = round(len(array) * 0.8)
@@ -155,24 +159,27 @@ def preprocessing_asag_kn1(path, file):
 
     save(file, array)
 
-
-preprocessing_asag_kn1('datasets/raw/kn1/unseen_answers', 'datasets/preprocessed/asag_kn1_ua')
-preprocessing_asag_kn1('datasets/raw/kn1/training', 'datasets/preprocessed/asag_kn1_train')
-
 """
+preprocessing_asag_kn1('datasets/raw/kn1/UQ', 'datasets/preprocessed/asag_kn1_uq')
+preprocessing_kn1('datasets/raw/kn1/UQ', 'datasets/preprocessed/kn1_uq')
+
+
 preprocessing_glucose('datasets/raw/GLUCOSE_training_data_final.csv', 'datasets/preprocessed/glucose')
 preprocessing_cose('datasets/preprocessed/cose_train', 'train')
-preprocessing_cose('datasets/preprocessed/cose_test', 'validation')
+
 preprocessing_esnli("datasets/preprocessed/esnli_train", 'train')
 preprocessing_esnli("datasets/preprocessed/esnli_val", 'validation')
+preprocessing_semeval("datasets/raw/sciEntsBank_training", "datasets/preprocessed/seb_train")
+
 preprocessing_esnli("datasets/preprocessed/esnli_test", 'test')
 
-preprocessing_semeval("datasets/raw/sciEntsBank_training", "datasets/preprocessed/seb_train")
 preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-answers", "datasets/preprocessed"
                                                                               "/seb_test_ua")
 preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-domains", "datasets/preprocessed"
                                                                               "/seb_test_ud")
 preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-questions", "datasets/preprocessed"
-                                                                            "/seb_test_uq")
+                                                                         "/seb_test_uq")
 """
+preprocessing_cose('datasets/preprocessed/cose_test', 'validation')
+
 print('done')

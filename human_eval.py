@@ -6,7 +6,7 @@ rouge = datasets.load_metric('rouge')
 meteor = datasets.load_metric('meteor')
 bert_score = datasets.load_metric('bertscore')
 
-data = np.load('sid.npy', allow_pickle=True)
+data = np.load('nik2.npy', allow_pickle=True)
 feedback_data = np.array([
     [x['Pred_Feed'] for x in data],
     [x['Gold_Feed'] for x in data]
