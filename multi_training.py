@@ -10,14 +10,14 @@ checkpoint_callback = ModelCheckpoint(
 )
 t5_test = LitMultiT5(4)
 trainer = pl.Trainer(
-    gpus=1,
-    # num_nodes=1,
-    # accelerator='ddp',
+    gpus=2,
+    num_nodes=1,
+    accelerator='ddp',
     max_epochs=64,
     accumulate_grad_batches=2,
     checkpoint_callback=checkpoint_callback,
-    # reload_dataloaders_every_epoch=True,
-    # num_sanity_val_steps=100,
+    reload_dataloaders_every_epoch=True,
+    num_sanity_val_steps=0,
     progress_bar_refresh_rate=100,
     # precision=16
 )
