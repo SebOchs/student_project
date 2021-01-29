@@ -241,7 +241,7 @@ class LitMultiT5(pl.LightningModule):
         self.batch_size = batch_size
         # multitasking:
         # datasets
-        self.seb = dl.T5Dataset("datasets/preprocessed/sciEntsBank_train.npy")
+        self.seb = dl.T5Dataset("datasets/preprocessed/seb_train.npy")
         self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
         self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
         self.esnli = dl.T5Dataset('datasets/preprocessed/esnli_train.npy')
@@ -343,7 +343,7 @@ class LitMultiT5(pl.LightningModule):
             get_subset(self.glucose, train_length),
             get_subset(self.seb, train_length),
             self.kn1_train_data])
-        return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=False)
+        return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(self.kn1_val_data, batch_size=1, num_workers=0, shuffle=True)
