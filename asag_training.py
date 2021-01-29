@@ -10,9 +10,9 @@ checkpoint_callback = ModelCheckpoint(
 )
 t5_test = LitAsagFineT5(4)
 trainer = pl.Trainer(
-    gpus=1,
-    # num_nodes=1,
-    # accelerator='ddp',
+    gpus=2,
+    num_nodes=1,
+    accelerator='ddp',
     max_epochs=64,
     accumulate_grad_batches=2,
     checkpoint_callback=checkpoint_callback,
