@@ -23,7 +23,7 @@ def preprocessing_semeval(folder_path, file_path):
         root = et.parse(folder_path + '/' + file).getroot()
         for ref_answer in root[1]:
             for stud_answer in root[2]:
-                text = "asag: reference: " + ref_answer.text[
+                text = "grade: reference: " + ref_answer.text[
                                              :-1] + tokenizer.eos_token + " student: " + stud_answer.text[:-1]
                 label = stud_answer.get('accuracy')
                 array.append([
@@ -114,9 +114,9 @@ def preprocessing_kn1(path, file):
                     # print(file + '/' + files, response)
                     score = float(x.find('score').text)
                     ref = ref_answers[0].text
-                    text = "score: " + response + tokenizer.eos_token + ref
+                    text = "grade: " + response + tokenizer.eos_token + ref
                     label = str(score)
-                    answer = str(score) + tokenizer.eos_token + "feedback: " + feedback
+                    answer = str(score) + tokenizer.eos_token + "explanation: " + feedback
                     array.append([
                         tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
                         tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[
@@ -145,9 +145,9 @@ def preprocessing_asag_kn1(path, file):
                     # print(file + '/' + files, response)
                     label = x.find('verification_feedback').text
                     ref = ref_answers[0].text
-                    text = "score: " + response + tokenizer.eos_token + ref
+                    text = "grade: " + response + tokenizer.eos_token + ref
 
-                    answer = label + tokenizer.eos_token + "feedback: " + feedback
+                    answer = label + tokenizer.eos_token + "explanation: " + feedback
                     array.append([
                         tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').input_ids[:MAX_TOKENS],
                         tokenizer(text.lower(), max_length=MAX_TOKENS, padding='max_length').attention_mask[:MAX_TOKENS],
@@ -155,31 +155,30 @@ def preprocessing_asag_kn1(path, file):
                         tokenizer(label.lower(), max_length=4, padding='max_length').input_ids,
                         len(tokenizer(answer.lower()).input_ids)
                     ])
-    x = min([x[4] for x in array])
+    # x = min([x[4] for x in array])
 
     save(file, array)
 
-"""
-preprocessing_asag_kn1('datasets/raw/kn1/UQ', 'datasets/preprocessed/asag_kn1_uq')
+
+# Preprocess for Multitasking
 preprocessing_kn1('datasets/raw/kn1/UQ', 'datasets/preprocessed/kn1_uq')
-
-
+"""
 preprocessing_glucose('datasets/raw/GLUCOSE_training_data_final.csv', 'datasets/preprocessed/glucose')
 preprocessing_cose('datasets/preprocessed/cose_train', 'train')
-
+preprocessing_cose('datasets/preprocessed/cose_test', 'validation')
 preprocessing_esnli("datasets/preprocessed/esnli_train", 'train')
 preprocessing_esnli("datasets/preprocessed/esnli_val", 'validation')
-preprocessing_semeval("datasets/raw/sciEntsBank_training", "datasets/preprocessed/seb_train")
-
 preprocessing_esnli("datasets/preprocessed/esnli_test", 'test')
 
+
+preprocessing_semeval("datasets/raw/sciEntsBank_training", "datasets/preprocessed/seb_train")
 preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-answers", "datasets/preprocessed"
-                                                                              "/seb_test_ua")
+                                                                             "/seb_test_ua")
 preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-domains", "datasets/preprocessed"
                                                                               "/seb_test_ud")
 preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-questions", "datasets/preprocessed"
                                                                          "/seb_test_uq")
+preprocessing_asag_kn1('datasets/raw/kn1/UQ', 'datasets/preprocessed/asag_kn1_uq')
 """
-preprocessing_cose('datasets/preprocessed/cose_test', 'validation')
 
 print('done')

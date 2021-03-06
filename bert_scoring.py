@@ -3,7 +3,7 @@ import datasets
 from utils import extract_pred
 bert_score = datasets.load_metric('bertscore')
 
-val_data = np.load('kn1_data_for_bertscore.npy', allow_pickle=True)
+val_data = np.load('multi_kn1_data_for_bertscore.npy', allow_pickle=True)
 pred = extract_pred(val_data[0])
 truth = [x.split(':', 1)[1] for x in val_data[1]]
 score = bert_score.compute(predictions=pred, references=truth, lang='en', rescale_with_baseline=True

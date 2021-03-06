@@ -121,6 +121,17 @@ def extract_pred(predictions):
     return array
 
 
+def extract_pred_premulti(predictions):
+    array = []
+    for pred in predictions:
+        try:
+            x = pred.split('explanation:', 1)[1]
+        except IndexError:
+            x = pred
+        array.append(x)
+    return array
+
+
 def extract_label(predictions):
     array = []
     for pred in predictions:
