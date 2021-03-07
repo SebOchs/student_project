@@ -351,8 +351,8 @@ class LitPreMultiT5(pl.LightningModule):
         self.batch_size = batch_size
         # multitasking:
         # datasets
-        self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
-        self.cose_val = dl.T5Dataset('datasets/preprocessed/cose_test.npy')
+        # self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
+        # self.cose_val = dl.T5Dataset('datasets/preprocessed/cose_test.npy')
         self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
         self.glucose_val = dl.T5Dataset('datasets/preprocessed/glucose_test.npy')
         self.esnli = dl.T5Dataset('datasets/preprocessed/esnli_train.npy')
@@ -443,23 +443,21 @@ class LitPreMultiT5(pl.LightningModule):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
 
     def train_dataloader(self):
-        train_length = len(self.cose)
+        train_length = len(self.glucose)
         train_set = ConcatDataset(
             [
                 get_subset(self.esnli, train_length),
-                self.cose,
-                get_subset(self.glucose, train_length)
+                self.glucose
             ]
         )
         return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=True)
 
     def val_dataloader(self):
-        val_length = len(self.cose_val)
+        # val_length = len(self.cose_val)
         val_set = ConcatDataset(
             [
-                get_subset(self.esnli_val, val_length),
-                self.cose_val,
-                get_subset(self.glucose_val, val_length)
+                self.esnli_val,
+                self.glucose_val
             ]
         )
         return DataLoader(val_set, batch_size=1, num_workers=0, shuffle=True)

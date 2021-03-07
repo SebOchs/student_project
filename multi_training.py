@@ -5,7 +5,7 @@ from litT5 import LitMultiT5, LitPreMultiT5
 checkpoint_callback = ModelCheckpoint(
     monitor='my_metric',
     mode="max",
-    filepath='models/multi_kn1_t5_{epoch}-{my_metric:.4f}',
+    filepath='models/esnli_glucose_multi_kn1_t5_{epoch}-{my_metric:.4f}',
     save_top_k=3
 )
 t5_test = LitPreMultiT5(4)
