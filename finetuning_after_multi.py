@@ -8,7 +8,7 @@ checkpoint_callback = ModelCheckpoint(
     filepath='models/multi_then_fine_kn1_t5_{epoch}-{my_metric:.4f}',
     save_top_k=3
 )
-t5_test = LitFineT5(4, model='multi_kn1_t5_epoch=3-my_metric=0.1030.ckpt')
+t5_test = LitFineT5(4, model='models/multi_kn1_t5_epoch=3-my_metric=0.1030.ckpt')
 trainer = pl.Trainer(
     gpus=2,
     num_nodes=1,
