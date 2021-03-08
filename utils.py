@@ -127,7 +127,10 @@ def extract_pred_premulti(predictions):
         try:
             x = pred.split('explanation:', 1)[1]
         except IndexError:
-            x = pred
+            try:
+                x = pred.split(':', 1)[1]
+            except IndexError:
+                x = pred
         array.append(x)
     return array
 

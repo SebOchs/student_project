@@ -179,7 +179,7 @@ class LitFineT5(pl.LightningModule):
         # and fourth entry label prediction
         val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
                     [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
-        pred = [x.split(' ', 2)[2] for x in val_data[0]]
+        pred = extract_pred_premulti(val_data[0])
         truth = [x.split(' ', 2)[2] for x in val_data[1]]
         text = [x['original'] for x in outputs]
         acc_data = np.array(val_data[2:])
