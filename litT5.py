@@ -16,11 +16,139 @@ meteor = datasets.load_metric('meteor')
 warnings.filterwarnings("ignore")
 
 
-class LitFineT5(pl.LightningModule):
+class LitPreMultiT5(pl.LightningModule):
 
     def __init__(self, batch_size):
-        super(LitFineT5, self).__init__()
+        super(LitPreMultiT5, self).__init__()
         self.model = T5ForConditionalGeneration.from_pretrained('t5-base')
+        self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
+        self.batch_size = batch_size
+        # multitasking:
+        # datasets
+        # self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
+        # self.cose_val = dl.T5Dataset('datasets/preprocessed/cose_test.npy')
+        self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
+        self.glucose_val = dl.T5Dataset('datasets/preprocessed/glucose_test.npy')
+        self.esnli = dl.T5Dataset('datasets/preprocessed/esnli_train.npy')
+        self.esnli_val = dl.T5Dataset('datasets/preprocessed/esnli_val.npy')
+
+        self.save_hyperparameters()
+
+    def forward(self, tok_seq, attn_seq):
+        return self.tokenizer.decode(self.model.generate(input_ids=tok_seq, attention_mask=attn_seq, min_length=8,
+                                                         max_length=128)[0],
+                                     skip_special_tokens=True)
+
+    def training_step(self, batch, batch_idx):
+        text, text_attn, answer, lab = batch
+        return self.model(input_ids=text, attention_mask=text_attn, labels=answer)[0].mean()
+
+    def validation_step(self, batch, batch_idx):
+        text, text_attn, answer, lab = batch
+        return {'prediction': self(text, text_attn),
+                'truth': self.tokenizer.decode(answer.squeeze(), skip_special_tokens=True),
+                'label': self.tokenizer.decode(lab.squeeze(), skip_special_tokens=True),
+                'original': self.tokenizer.decode(text.squeeze(), skip_special_tokens=True),
+                }
+
+    def validation_epoch_end(self, outputs):
+        # validation array, first entry are all full text predictions, second entry gold standard, third entry label
+        # and fourth entry label prediction
+        val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
+                    [x['label'] for x in outputs], [x['original'] for x in outputs]]
+        truth = [x.split(':', 1)[1] for x in val_data[1]]
+        acc_data = np.array(list(zip(val_data[2], val_data[0])))[np.where(np.array(
+            ["glucose:" not in x for x in val_data[3]]) == True)]
+        if len(acc_data) > 0:
+            val_acc = sum([x[1].startswith(x[0]) for x in acc_data]) / len(acc_data)
+        else:
+            val_acc = 0
+        pred = extract_pred_premulti(val_data[0])
+        sacrebleu_score = sacrebleu.compute(predictions=pred,
+                                            references=[[x] for x in truth])['score']
+        rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
+        meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
+
+        self.log('my_metric', (sacrebleu_score / 100 + rouge_score + meteor_score) / 3 * val_acc)
+
+        self.log('bleu', sacrebleu_score)
+        self.log('val_macro', val_acc)
+        self.log('rouge', rouge_score)
+        self.log('meteor', meteor_score)
+        print('Acc = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
+              .format(val_acc, sacrebleu_score, rouge_score, meteor_score))
+
+    def test_step(self, batch, batch_idx):
+        text, text_attn, answer, lab = batch
+        return {'prediction': self(text, text_attn),
+                'truth': self.tokenizer.decode(answer.squeeze(), skip_special_tokens=True),
+                'label': self.tokenizer.decode(lab.squeeze(), skip_special_tokens=True),
+                'original': self.tokenizer.decode(text.squeeze(), skip_special_tokens=True),
+                }
+
+    def test_epoch_end(self, outputs):
+        # validation array, first entry are all full text predictions, second entry gold standard, third entry label
+        # and fourth entry label prediction
+        val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs], [x['original'] for x in outputs],
+                    [x['label'] for x in outputs]]
+        pred = extract_pred(val_data[0])
+        truth = [x.split(':', 1)[1] for x in val_data[1]]
+        label_pred = extract_label(val_data[0])
+        acc_data = np.array([val_data[3], label_pred])
+        val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
+        val_weighted = weighted_f1(acc_data[1], acc_data[0])
+        val_macro = macro_f1(acc_data[1], acc_data[0])
+        sacrebleu_score = sacrebleu.compute(predictions=pred,
+                                            references=[[x] for x in truth])['score']
+        rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
+        meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
+
+        self.log('bleu', sacrebleu_score)
+        self.log('macro_f1', val_macro)
+        self.log('rouge', rouge_score)
+        self.log('meteor', meteor_score)
+        self.log('acc', val_acc)
+        self.log('weighted', val_weighted)
+        print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
+              .format(val_acc, val_macro, val_weighted, sacrebleu_score, rouge_score, meteor_score))
+        np.save('multi_kn1_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
+
+    def configure_optimizers(self):
+        return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
+
+    def train_dataloader(self):
+        train_length = len(self.glucose)
+        train_set = ConcatDataset(
+            [
+                get_subset(self.esnli, train_length),
+                self.glucose
+            ]
+        )
+        return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=True)
+
+    def val_dataloader(self):
+        # val_length = len(self.cose_val)
+        val_set = ConcatDataset(
+            [
+                self.esnli_val,
+                self.glucose_val
+            ]
+        )
+        return DataLoader(val_set, batch_size=1, num_workers=0, shuffle=True)
+
+    def test_dataloader(self):
+        return DataLoader(dl.T5Dataset('datasets/preprocessed/esnli_test.npy'), batch_size=1, num_workers=0,
+                          shuffle=False)
+
+
+class LitFineT5(pl.LightningModule):
+
+    def __init__(self, batch_size, model=''):
+        super(LitFineT5, self).__init__()
+        if len(model) > 0:
+            self.model = LitPreMultiT5.load_from_checkpoint(model).model
+        else:
+            self.model = T5ForConditionalGeneration.from_pretrained('t5-base')
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.batch_size = batch_size
         data = dl.T5Dataset('datasets/preprocessed/kn1_train.npy')
@@ -340,128 +468,3 @@ class LitMultiT5(pl.LightningModule):
 
     def test_dataloader(self):
         return DataLoader(self.kn1_test_data, batch_size=1, num_workers=0, shuffle=False)
-
-
-class LitPreMultiT5(pl.LightningModule):
-
-    def __init__(self, batch_size):
-        super(LitPreMultiT5, self).__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-base')
-        self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
-        self.batch_size = batch_size
-        # multitasking:
-        # datasets
-        # self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
-        # self.cose_val = dl.T5Dataset('datasets/preprocessed/cose_test.npy')
-        self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
-        self.glucose_val = dl.T5Dataset('datasets/preprocessed/glucose_test.npy')
-        self.esnli = dl.T5Dataset('datasets/preprocessed/esnli_train.npy')
-        self.esnli_val = dl.T5Dataset('datasets/preprocessed/esnli_val.npy')
-
-        self.save_hyperparameters()
-
-    def forward(self, tok_seq, attn_seq):
-        return self.tokenizer.decode(self.model.generate(input_ids=tok_seq, attention_mask=attn_seq, min_length=8,
-                                                         max_length=128)[0],
-                                     skip_special_tokens=True)
-
-    def training_step(self, batch, batch_idx):
-        text, text_attn, answer, lab = batch
-        return self.model(input_ids=text, attention_mask=text_attn, labels=answer)[0].mean()
-
-    def validation_step(self, batch, batch_idx):
-        text, text_attn, answer, lab = batch
-        return {'prediction': self(text, text_attn),
-                'truth': self.tokenizer.decode(answer.squeeze(), skip_special_tokens=True),
-                'label': self.tokenizer.decode(lab.squeeze(), skip_special_tokens=True),
-                'original': self.tokenizer.decode(text.squeeze(), skip_special_tokens=True),
-                }
-
-    def validation_epoch_end(self, outputs):
-        # validation array, first entry are all full text predictions, second entry gold standard, third entry label
-        # and fourth entry label prediction
-        val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
-                    [x['label'] for x in outputs], [x['original'] for x in outputs]]
-        truth = [x.split(':', 1)[1] for x in val_data[1]]
-        acc_data = np.array(list(zip(val_data[2], val_data[0])))[np.where(np.array(
-            ["glucose:" not in x for x in val_data[3]]) == True)]
-        if len(acc_data) > 0:
-            val_acc = sum([x[1].startswith(x[0]) for x in acc_data])/len(acc_data)
-        else:
-            val_acc = 0
-        pred = extract_pred_premulti(val_data[0])
-        sacrebleu_score = sacrebleu.compute(predictions=pred,
-                                            references=[[x] for x in truth])['score']
-        rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
-        meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
-
-        self.log('my_metric', (sacrebleu_score / 100 + rouge_score + meteor_score) / 3 * val_acc)
-
-        self.log('bleu', sacrebleu_score)
-        self.log('val_macro', val_acc)
-        self.log('rouge', rouge_score)
-        self.log('meteor', meteor_score)
-        print('Acc = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
-              .format(val_acc, sacrebleu_score, rouge_score, meteor_score))
-
-    def test_step(self, batch, batch_idx):
-        text, text_attn, answer, lab = batch
-        return {'prediction': self(text, text_attn),
-                'truth': self.tokenizer.decode(answer.squeeze(), skip_special_tokens=True),
-                'label': self.tokenizer.decode(lab.squeeze(), skip_special_tokens=True),
-                'original': self.tokenizer.decode(text.squeeze(), skip_special_tokens=True),
-                }
-
-    def test_epoch_end(self, outputs):
-        # validation array, first entry are all full text predictions, second entry gold standard, third entry label
-        # and fourth entry label prediction
-        val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs], [x['original'] for x in outputs],
-                    [x['label'] for x in outputs]]
-        pred = extract_pred(val_data[0])
-        truth = [x.split(':', 1)[1] for x in val_data[1]]
-        label_pred = extract_label(val_data[0])
-        acc_data = np.array([val_data[3], label_pred])
-        val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
-        val_weighted = weighted_f1(acc_data[1], acc_data[0])
-        val_macro = macro_f1(acc_data[1], acc_data[0])
-        sacrebleu_score = sacrebleu.compute(predictions=pred,
-                                            references=[[x] for x in truth])['score']
-        rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
-        meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
-
-        self.log('bleu', sacrebleu_score)
-        self.log('macro_f1', val_macro)
-        self.log('rouge', rouge_score)
-        self.log('meteor', meteor_score)
-        self.log('acc', val_acc)
-        self.log('weighted', val_weighted)
-        print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
-              .format(val_acc, val_macro, val_weighted, sacrebleu_score, rouge_score, meteor_score))
-        np.save('multi_kn1_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
-
-    def configure_optimizers(self):
-        return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
-
-    def train_dataloader(self):
-        train_length = len(self.glucose)
-        train_set = ConcatDataset(
-            [
-                get_subset(self.esnli, train_length),
-                self.glucose
-            ]
-        )
-        return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=True)
-
-    def val_dataloader(self):
-        # val_length = len(self.cose_val)
-        val_set = ConcatDataset(
-            [
-                self.esnli_val,
-                self.glucose_val
-            ]
-        )
-        return DataLoader(val_set, batch_size=1, num_workers=0, shuffle=True)
-
-    def test_dataloader(self):
-        return DataLoader(dl.T5Dataset('datasets/preprocessed/esnli_test.npy'), batch_size=1, num_workers=0,
-                          shuffle=False)
