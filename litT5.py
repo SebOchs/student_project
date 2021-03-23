@@ -25,12 +25,14 @@ class LitPreMultiT5(pl.LightningModule):
         self.batch_size = batch_size
         # multitasking:
         # datasets
-        # self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
-        # self.cose_val = dl.T5Dataset('datasets/preprocessed/cose_test.npy')
-        self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
-        self.glucose_val = dl.T5Dataset('datasets/preprocessed/glucose_test.npy')
+        self.seb = dl.T5Dataset("datasets/preprocessed/seb_train.npy")
+        self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
+        # self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
+        # self.glucose_val = dl.T5Dataset('datasets/preprocessed/glucose_test.npy')
         self.esnli = dl.T5Dataset('datasets/preprocessed/esnli_train.npy')
-        self.esnli_val = dl.T5Dataset('datasets/preprocessed/esnli_val.npy')
+        kn1 = dl.T5Dataset('datasets/preprocessed/asag_kn1_train.npy')
+        _, self.kn1_val_data = random_split(kn1, split(len(kn1)),
+                                                              generator=torch.Generator().manual_seed(42))
 
         self.save_hyperparameters()
 
@@ -57,26 +59,27 @@ class LitPreMultiT5(pl.LightningModule):
         val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
                     [x['label'] for x in outputs], [x['original'] for x in outputs]]
         truth = [x.split(':', 1)[1] for x in val_data[1]]
+        """
         acc_data = np.array(list(zip(val_data[2], val_data[0])))[np.where(np.array(
             ["glucose:" not in x for x in val_data[3]]) == True)]
-        if len(acc_data) > 0:
-            val_acc = sum([x[1].startswith(x[0]) for x in acc_data]) / len(acc_data)
-        else:
-            val_acc = 0
+        """
+        val_acc = np.sum(np.array(extract_label(val_data[0])) == np.array(val_data[2])) / len(val_data[2])
+        val_macro = macro_f1(extract_label(val_data[0]), val_data[2])
+
         pred = extract_pred_premulti(val_data[0])
         sacrebleu_score = sacrebleu.compute(predictions=pred,
                                             references=[[x] for x in truth])['score']
         rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
         meteor_score = meteor.compute(predictions=pred, references=truth)['meteor']
 
-        self.log('my_metric', (sacrebleu_score / 100 + rouge_score + meteor_score) / 3 * val_acc)
+        self.log('my_metric', (sacrebleu_score / 100 + rouge_score + meteor_score) / 3 * val_macro)
 
         self.log('bleu', sacrebleu_score)
-        self.log('val_macro', val_acc)
+        self.log('val_macro', val_macro)
         self.log('rouge', rouge_score)
         self.log('meteor', meteor_score)
-        print('Acc = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
-              .format(val_acc, sacrebleu_score, rouge_score, meteor_score))
+        print('Acc = {:.4f}, Macro-F1 = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
+              .format(val_acc, val_macro, sacrebleu_score, rouge_score, meteor_score))
 
     def test_step(self, batch, batch_idx):
         text, text_attn, answer, lab = batch
@@ -117,16 +120,18 @@ class LitPreMultiT5(pl.LightningModule):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
 
     def train_dataloader(self):
-        train_length = len(self.glucose)
+        train_length = len(self.seb)
         train_set = ConcatDataset(
             [
                 get_subset(self.esnli, train_length),
-                self.glucose
+                get_subset(self.cose, train_length),
+                self.seb
             ]
         )
         return DataLoader(train_set, batch_size=self.batch_size, num_workers=0, shuffle=True)
 
     def val_dataloader(self):
+        """
         # val_length = len(self.cose_val)
         val_set = ConcatDataset(
             [
@@ -134,10 +139,11 @@ class LitPreMultiT5(pl.LightningModule):
                 self.glucose_val
             ]
         )
-        return DataLoader(val_set, batch_size=1, num_workers=0, shuffle=True)
+        """
+        return DataLoader(self.kn1_val_data, batch_size=1, num_workers=0, shuffle=True)
 
     def test_dataloader(self):
-        return DataLoader(dl.T5Dataset('datasets/preprocessed/esnli_test.npy'), batch_size=1, num_workers=0,
+        return DataLoader(self.kn1_val_data, batch_size=1, num_workers=0,
                           shuffle=False)
 
 
@@ -359,9 +365,9 @@ class LitMultiT5(pl.LightningModule):
         self.batch_size = batch_size
         # multitasking:
         # datasets
-        # self.seb = dl.T5Dataset("datasets/preprocessed/seb_train.npy")
+        self.seb = dl.T5Dataset("datasets/preprocessed/seb_train.npy")
         self.cose = dl.T5Dataset('datasets/preprocessed/cose_train.npy')
-        self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
+        # self.glucose = dl.T5Dataset('datasets/preprocessed/glucose_train.npy')
         self.esnli = dl.T5Dataset('datasets/preprocessed/esnli_train.npy')
         kn1 = dl.T5Dataset('datasets/preprocessed/kn1_train.npy')
 
