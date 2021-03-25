@@ -1,14 +1,14 @@
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from litT5 import LitFineT5, LitPreMultiT5
+from litT5 import LitFineT5, LitPreMultiT5, LitAsagFineT5
 
 checkpoint_callback = ModelCheckpoint(
     monitor='my_metric',
     mode="max",
-    filepath='models/multi_then_fine_kn1_t5_{epoch}-{my_metric:.4f}',
+    filepath='models/final_kn1_t5_{epoch}-{my_metric:.4f}',
     save_top_k=3
 )
-t5_test = LitFineT5(4, model='models/multi_kn1_t5_epoch=3-my_metric=0.1030.ckpt')
+t5_test = LitAsagFineT5(4, model='models/new_multi_kn1_t5_epoch=38-my_metric=0.0055.ckpt')
 trainer = pl.Trainer(
     gpus=2,
     num_nodes=1,

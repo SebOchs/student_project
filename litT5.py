@@ -253,9 +253,12 @@ class LitFineT5(pl.LightningModule):
 
 class LitAsagFineT5(pl.LightningModule):
 
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, model=''):
         super(LitAsagFineT5, self).__init__()
-        self.model = T5ForConditionalGeneration.from_pretrained('t5-base')
+        if len(model) > 0:
+            self.model = LitPreMultiT5.load_from_checkpoint(model).model
+        else:
+            self.model = T5ForConditionalGeneration.from_pretrained('t5-base')
         self.tokenizer = T5Tokenizer.from_pretrained('t5-base')
         self.batch_size = batch_size
         data = dl.T5Dataset('datasets/preprocessed/asag_kn1_train.npy')
