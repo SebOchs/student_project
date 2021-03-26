@@ -17,7 +17,7 @@ trainer = pl.Trainer(
     accumulate_grad_batches=4,
     checkpoint_callback=checkpoint_callback,
     reload_dataloaders_every_epoch=True,
-    num_sanity_val_steps=10,
+    num_sanity_val_steps=0,
     progress_bar_refresh_rate=1000,
     # precision=16
 )
