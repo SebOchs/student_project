@@ -6,9 +6,9 @@ checkpoint_callback = ModelCheckpoint(
     monitor='my_metric',
     mode="max",
     filepath='models/final_kn1_t5_{epoch}-{my_metric:.4f}',
-    save_top_k=3
+    save_top_k=8
 )
-t5_test = LitAsagFineT5(4, model='models/new_multi_kn1_t5_epoch=38-my_metric=0.0055.ckpt')
+t5_test = LitAsagFineT5(4, model='models/new_multi_kn1_t5_epoch=36-my_metric=0.0035.ckpt')
 trainer = pl.Trainer(
     gpus=2,
     num_nodes=1,

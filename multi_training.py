@@ -6,7 +6,7 @@ checkpoint_callback = ModelCheckpoint(
     monitor='my_metric',
     mode="max",
     filepath='models/new_multi_kn1_t5_{epoch}-{my_metric:.4f}',
-    save_top_k=12
+    save_top_k=8
 )
 t5_test = LitPreMultiT5(4)
 trainer = pl.Trainer(
