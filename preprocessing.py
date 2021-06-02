@@ -159,7 +159,7 @@ def preprocessing_asag_kn1(path, file):
 
     save(file, array)
 
-
+"""
 # Preprocess for Multitasking
 # preprocessing_glucose('datasets/raw/GLUCOSE_training_data_final.csv', 'datasets/preprocessed/glucose')
 preprocessing_cose('datasets/preprocessed/cose_train', 'train')
@@ -176,6 +176,7 @@ preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-domains", "d
                                                                               "/seb_test_ud")
 preprocessing_semeval("datasets/raw/sciEntsBank_testing/test-unseen-questions", "datasets/preprocessed"
                                                                          "/seb_test_uq")
+"""
 preprocessing_asag_kn1('datasets/raw/kn1/training', 'datasets/preprocessed/asag_kn1_train')
 preprocessing_asag_kn1('datasets/raw/kn1/UA', 'datasets/preprocessed/asag_kn1_ua')
 preprocessing_asag_kn1('datasets/raw/kn1/UQ', 'datasets/preprocessed/asag_kn1_uq')

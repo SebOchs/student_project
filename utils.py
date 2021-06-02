@@ -121,7 +121,7 @@ def extract_pred(predictions):
     return array
 
 
-def extract_pred_premulti(predictions):
+def extract_model_pred(predictions):
     array = []
     for pred in predictions:
         try:

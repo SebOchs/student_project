@@ -66,7 +66,7 @@ class LitPreMultiT5(pl.LightningModule):
         val_acc = np.sum(np.array(extract_label(val_data[0])) == np.array(val_data[2])) / len(val_data[2])
         val_macro = macro_f1(extract_label(val_data[0]), val_data[2])
 
-        pred = extract_pred_premulti(val_data[0])
+        pred = extract_model_pred(val_data[0])
         sacrebleu_score = sacrebleu.compute(predictions=pred,
                                             references=[[x] for x in truth])['score']
         rouge_score = rouge.compute(predictions=pred, references=truth)['rouge2'].mid.fmeasure
@@ -148,6 +148,9 @@ class LitPreMultiT5(pl.LightningModule):
 
 
 class LitFineT5(pl.LightningModule):
+    """
+
+    """
 
     def __init__(self, batch_size, model=''):
         super(LitFineT5, self).__init__()
@@ -185,7 +188,7 @@ class LitFineT5(pl.LightningModule):
         # and fourth entry label prediction
         val_data = [[x['prediction'] for x in outputs], [x['truth'] for x in outputs],
                     [x['label'] for x in outputs], [x['prediction'].split(' ', 1)[0] for x in outputs]]
-        pred = extract_pred_premulti(val_data[0])
+        pred = extract_model_pred(val_data[0])
         truth = [x.split(' ', 2)[2] for x in val_data[1]]
         text = [x['original'] for x in outputs]
         acc_data = np.array(val_data[2:])
@@ -236,7 +239,7 @@ class LitFineT5(pl.LightningModule):
         self.log('meteor', meteor_score)
         print('MSE = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
               .format(mse_val, sacrebleu_score, rouge_score, meteor_score))
-        np.save('kn1_uq_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
+        np.save('kn1_ua_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
 
     def configure_optimizers(self):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
@@ -291,7 +294,6 @@ class LitAsagFineT5(pl.LightningModule):
                     [x['label'] for x in outputs]]
         pred = extract_pred(val_data[0])
         truth = [x.split(':', 1)[1] for x in val_data[1]]
-        text = [x['original'] for x in outputs]
         label_pred = extract_label(val_data[0])
         acc_data = np.array([val_data[2], label_pred])
         val_acc = np.sum(acc_data[0] == acc_data[1]) / acc_data.shape[1]
@@ -344,7 +346,7 @@ class LitAsagFineT5(pl.LightningModule):
         self.log('weighted', val_weighted)
         print('Acc = {:.4f}, M-F1 = {:.4f}, W-F1 = {:.4f}, BLEU = {:.4f}, Rouge = {:.4f}, Meteor = {:.4f}'
               .format(val_acc, val_macro, val_weighted, sacrebleu_score, rouge_score, meteor_score))
-        np.save('final_kn1_uq_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
+        np.save('asag_kn1_ua_data_for_bertscore.npy', np.array(val_data[:3]), allow_pickle=True)
 
     def configure_optimizers(self):
         return Adafactor(self.model.parameters(), lr=None, warmup_init=True, relative_step=True)
